@@ -2,10 +2,11 @@
   <img src="assets/ufs_logo.png" alt="University of the Free State" width="180"/>
 </p>
 
-<h1 align="center">Deep Neural Network Emulation and Uncertainty Quantification for Variable-Annuity Guarantee Valuation under Stochastic Mortality</h1>
+<h1 align="center">Sensitivity Augmented Deep Neural Network Emulation and Uncertainty Quantification for Variable Annuity Guarantee Valuation under Stochastic Mortality</h1>
 
-<p align="center"><em>A calibrated deep surrogate for the present value of variable-annuity guarantee
-liabilities — delivering not only a point value but a well-founded predictive interval.</em></p>
+<p align="center"><em>A deep emulator for variable annuity guarantee liabilities, trained on Monte Carlo
+values and their sensitivities (Greeks) for higher accuracy and lower simulation cost, with
+calibrated uncertainty on both values and sensitivities.</em></p>
 
 PhD research **proposal** in **Mathematical Statistics**, prepared for the **University of the
 Free State (UFS)**, 2027 intake. This repository holds the proposal and its supporting material;
