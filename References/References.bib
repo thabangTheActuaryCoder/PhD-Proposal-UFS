@@ -1,36 +1,54 @@
 % Core references for the PhD proposal.
 % natbib author-year style, per the UFS guideline. Verify details before final submission.
 
-@article{ElKarouiEtAl1997,
-  author  = {El Karoui, N. and Kapoudjian, C. and Pardoux, E. and Peng, S. and Quenez, M. C.},
-  title   = {Reflected Solutions of Backward {SDE}s, and Related Obstacle Problems for {PDE}s},
-  journal = {The Annals of Probability},
-  year    = {1997},
-  volume  = {25},
+% --- Variable-annuity valuation ---
+@article{BauerKlingRuss2008,
+  author  = {Bauer, D. and Kling, A. and Russ, J.},
+  title   = {A Universal Pricing Framework for Guaranteed Minimum Benefits in Variable Annuities},
+  journal = {ASTIN Bulletin},
+  year    = {2008},
+  volume  = {38},
   number  = {2},
-  pages   = {702--737}
+  pages   = {621--651}
 }
 
-@article{ElKarouiQuenez1995,
-  author  = {El Karoui, N. and Quenez, M. C.},
-  title   = {Dynamic Programming and Pricing of Contingent Claims in an Incomplete Market},
-  journal = {SIAM Journal on Control and Optimization},
-  year    = {1995},
-  volume  = {33},
-  number  = {1},
-  pages   = {29--66}
+% --- Neural-network / metamodel emulation of VA portfolios ---
+@phdthesis{Hejazi2016,
+  author  = {Hejazi, S. A.},
+  title   = {A Neural Network Approach to Efficient Valuation of Large Portfolios of Variable Annuities},
+  school  = {University of Toronto},
+  year    = {2016}
 }
 
-@article{Kramkov1996,
-  author  = {Kramkov, D. O.},
-  title   = {Optional Decomposition of Supermartingales and Hedging Contingent Claims in Incomplete Security Markets},
-  journal = {Probability Theory and Related Fields},
-  year    = {1996},
-  volume  = {105},
-  number  = {4},
-  pages   = {459--479}
+@article{HejaziJackson2016,
+  author  = {Hejazi, S. A. and Jackson, K. R.},
+  title   = {A Neural Network Approach to Efficient Valuation of Large Portfolios of Variable Annuities},
+  journal = {Insurance: Mathematics and Economics},
+  year    = {2016},
+  volume  = {70},
+  pages   = {169--181}
 }
 
+@article{GanLin2015,
+  author  = {Gan, G. and Lin, X. S.},
+  title   = {Valuation of Large Variable Annuity Portfolios under Nested Simulation: A Functional Data Approach},
+  journal = {Insurance: Mathematics and Economics},
+  year    = {2015},
+  volume  = {62},
+  pages   = {138--150}
+}
+
+@article{GanLin2018,
+  author  = {Gan, G. and Lin, X. S.},
+  title   = {Efficient Greek Calculation of Variable Annuity Portfolios for Dynamic Hedging: A Two-Level Metamodeling Approach},
+  journal = {North American Actuarial Journal},
+  year    = {2018},
+  volume  = {22},
+  number  = {2},
+  pages   = {161--177}
+}
+
+% --- Stochastic mortality ---
 @article{Biffis2005,
   author  = {Biffis, E.},
   title   = {Affine Processes for Dynamic Mortality and Actuarial Valuations},
@@ -51,42 +69,45 @@
   pages   = {659--671}
 }
 
-@article{HanJentzenE2018,
-  author  = {Han, J. and Jentzen, A. and E, W.},
-  title   = {Solving High-Dimensional Partial Differential Equations Using Deep Learning},
-  journal = {Proceedings of the National Academy of Sciences},
+% --- Uncertainty quantification in deep learning ---
+@inproceedings{Lakshminarayanan2017,
+  author    = {Lakshminarayanan, B. and Pritzel, A. and Blundell, C.},
+  title     = {Simple and Scalable Predictive Uncertainty Estimation Using Deep Ensembles},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2017},
+  volume    = {30}
+}
+
+@inproceedings{GalGhahramani2016,
+  author    = {Gal, Y. and Ghahramani, Z.},
+  title     = {Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2016},
+  pages     = {1050--1059}
+}
+
+@inproceedings{KendallGal2017,
+  author    = {Kendall, A. and Gal, Y.},
+  title     = {What Uncertainties Do We Need in Bayesian Deep Learning for Computer Vision?},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2017},
+  volume    = {30}
+}
+
+% --- Conformal prediction ---
+@book{Vovk2005,
+  author    = {Vovk, V. and Gammerman, A. and Shafer, G.},
+  title     = {Algorithmic Learning in a Random World},
+  publisher = {Springer},
+  year      = {2005}
+}
+
+@article{Lei2018,
+  author  = {Lei, J. and G'Sell, M. and Rinaldo, A. and Tibshirani, R. J. and Wasserman, L.},
+  title   = {Distribution-Free Predictive Inference for Regression},
+  journal = {Journal of the American Statistical Association},
   year    = {2018},
-  volume  = {115},
-  number  = {34},
-  pages   = {8505--8510}
-}
-
-@article{BeckerCheriditoJentzen2019,
-  author  = {Becker, S. and Cheridito, P. and Jentzen, A.},
-  title   = {Deep Optimal Stopping},
-  journal = {Journal of Machine Learning Research},
-  year    = {2019},
-  volume  = {20},
-  number  = {74},
-  pages   = {1--25}
-}
-
-@article{BuehlerEtAl2019,
-  author  = {Buehler, H. and Gonon, L. and Teichmann, J. and Wood, B.},
-  title   = {Deep Hedging},
-  journal = {Quantitative Finance},
-  year    = {2019},
-  volume  = {19},
-  number  = {8},
-  pages   = {1271--1291}
-}
-
-@article{BauerKlingRuss2008,
-  author  = {Bauer, D. and Kling, A. and Russ, J.},
-  title   = {A Universal Pricing Framework for Guaranteed Minimum Benefits in Variable Annuities},
-  journal = {ASTIN Bulletin},
-  year    = {2008},
-  volume  = {38},
-  number  = {2},
-  pages   = {621--651}
+  volume  = {113},
+  number  = {523},
+  pages   = {1094--1111}
 }

@@ -1,48 +1,50 @@
-# Reflected BSDEs and Optimal Stopping for Variable-Annuity Surrender Guarantees
+<p align="center">
+  <img src="assets/ufs_logo.png" alt="University of the Free State" width="180"/>
+</p>
 
-Super-Replication under Stochastic Mortality in Incomplete Markets: Well-Posedness,
-an Optional-Decomposition Duality, and a Convergence-Guaranteed Deep Solver.
+<h1 align="center">Deep Neural Network Emulation and Uncertainty Quantification for Variable-Annuity Guarantee Valuation under Stochastic Mortality</h1>
 
-PhD research **proposal** in **Mathematical Statistics**, prepared for the University of the
-Free State (UFS) 2027 intake. This repository holds the proposal and its supporting material;
+<p align="center"><em>A calibrated deep surrogate for the present value of variable-annuity guarantee
+liabilities — delivering not only a point value but a well-founded predictive interval.</em></p>
+
+PhD research **proposal** in **Mathematical Statistics**, prepared for the **University of the
+Free State (UFS)**, 2027 intake. This repository holds the proposal and its supporting material;
 the thesis manuscript will live in a separate repository once the topic is registered.
 
 **Author:** Thabang Bongani Junior Baloyi
 **Supervisor:** Dr. Jan Blomerous (FASSA)
 **Programme:** PhD (Mathematical / Applied Statistics), three years, 2027 intake —
-stochastic-analysis spine first, deep-learning solver as the computational layer, a calibrated
-variable-annuity book as the empirical coda.
+a statistics spine (emulation + uncertainty quantification) with variable-annuity guarantee
+valuation under stochastic mortality as the application.
 
 ## Overview
 
-A variable annuity lets the policyholder **surrender (lapse) at any time** before maturity and
-collect a guaranteed benefit. That right is an **American-style option embedded in a life
-contract**: the holder exercises at the stopping time that maximises value, so the liability is
-a **Snell envelope**, characterised by a **reflected backward stochastic differential equation
-(RBSDE)**. Two features move this beyond the classical theory and beyond the candidate's MSc on
-super-hedging of American options:
+Valuing the guarantees embedded in variable annuities (GMAB / GMDB / GMWB) requires **nested
+Monte Carlo**: an outer set of real-world scenarios, each carrying an inner set of risk-neutral
+valuation paths. Under **stochastic mortality** the state space grows further, and the nested
+simulation becomes prohibitively expensive for an insurer that must revalue a large book daily
+for pricing, hedging and capital.
 
-1. the policyholder may **die before surrendering**, giving a random horizon driven by a
-   **stochastic mortality intensity**; and
-2. mortality risk is **not traded**, so the market is **incomplete** and the guarantee can only
-   be **super-replicated**.
+This proposal builds a **deep neural network emulator** that maps a contract-and-market-and-
+mortality state vector directly to the **present value of the guarantee liability**, replacing the
+inner simulation — and, crucially, attaches a **quantified, calibrated uncertainty** to every
+prediction. The work is organised in three parts.
 
-The proposal treats this as a problem of well-posedness, duality and finite-sample computation,
-in three parts.
+1. **Emulation** (deep learning). Train a DNN surrogate
+   `f_theta : x -> Y` from state vector `x` (policy, financial-state and mortality features) to
+   `Y`, the present value of the guarantee liability, learned against nested-Monte-Carlo targets.
+   This extends the neural-network portfolio-valuation line of Hejazi & Jackson and Gan & Lin to a
+   genuinely **stochastic-mortality** setting.
 
-1. **Well-posedness** (stochastic analysis). Formulate and prove existence and uniqueness of the
-   solution of the RBSDE for a VA surrender guarantee under a stochastic mortality intensity in an
-   incomplete market (random-horizon, doubly-stochastic structure).
+2. **Uncertainty quantification** (statistics — the doctoral contribution). Move from a point `Y`
+   to a **predictive interval** for `Y`, separating **epistemic** uncertainty (the emulator's own
+   error) from **aleatoric** uncertainty (financial and mortality randomness). Candidate machinery:
+   deep ensembles, Bayesian last-layer / MC-dropout, and **split-conformal prediction** with
+   finite-sample coverage guarantees.
 
-2. **Duality** (mathematical finance). Establish a **super-hedging / optional-decomposition**
-   theorem for the mortality-driven supermartingale — the doctoral contribution, generalising the
-   optional decomposition studied in the candidate's MSc from a purely financial market to one
-   carrying unhedgeable mortality risk.
-
-3. **Computation and validation** (deep learning + empirical). Design a **deep-BSDE / deep
-   optimal-stopping** scheme for the solution, prove convergence / error bounds, and validate on
-   Human Mortality Database intensities and a concrete VA contract, with a South African case
-   study as an optional coda.
+3. **Validation and application** (empirical). Benchmark emulator value and intervals against full
+   nested Monte Carlo; study the capital/reserve impact of the quantified uncertainty; optional
+   South African case study (StatsSA / ASSA mortality).
 
 ## Status
 
@@ -50,26 +52,45 @@ Proposal under construction. Results marked **To be established** are targets wi
 route, not proved theorems. The current working draft is `Proposal/PhD_Proposal_Skeleton.md`
 (section-by-section skeleton with a 10–12 page budget); full prose and a LaTeX build will follow.
 
+## Model at a Glance
+
+**Input** — a single state vector `x` with three blocks:
+
+| Block | Features |
+|-------|----------|
+| Policy characteristics | age; sex (if in the mortality basis); contract duration; initial premium; current account value; guarantee base; time to maturity; surrender-charge schedule; withdrawal rate; guarantee type |
+| Financial-state variables | interest rate; equity level / moneyness; equity volatility; stochastic-volatility state; correlation parameters; fee rate |
+| Mortality variables | current mortality intensity; mortality trend; mortality volatility; cohort effect; financial–mortality correlation; mortality-model parameters |
+
+**Output** — a single continuous response plus its uncertainty:
+
+```
+Y  = present value of the guarantee liability           (point prediction)
+Y  ∈ [ L(x), U(x) ]  with coverage ≥ 1 − α              (calibrated predictive interval)
+```
+
 ## Methods and Tools
 
-- **Stochastic analysis:** reflected BSDEs, Snell envelopes, optimal stopping, optional
-  decomposition of supermartingales, enlargement of filtration, affine stochastic-mortality
-  intensities.
-- **Deep learning:** deep-BSDE solvers (Han–Jentzen–E), deep optimal stopping
-  (Becker–Cheridito–Jentzen), deep hedging (Buehler et al.); PyTorch, GPU, Optuna.
-- **Empirical:** Human Mortality Database calibration; a specified VA contract (fee, guarantee
-  level, surrender schedule); South African mortality (StatsSA / ASSA) as an optional case study.
-- **Typesetting:** LaTeX (to follow), natbib author-year per the UFS guideline.
+- **Deep learning / emulation:** feedforward and sequence (GRU) surrogates; training against
+  nested-MC labels; PyTorch, GPU, Optuna hyperparameter search.
+- **Uncertainty quantification:** deep ensembles, Bayesian last-layer, MC-dropout,
+  **split-conformal prediction** (finite-sample coverage), aleatoric/epistemic decomposition,
+  calibration diagnostics (coverage, interval width, CRPS).
+- **Stochastic mortality:** affine mortality intensities (Biffis), Lee–Carter / CBD dynamics.
+- **Benchmark:** nested Monte Carlo valuation of VA guarantees (Bauer–Kling–Russ framework).
+- **Empirical:** Human Mortality Database; a specified VA contract; optional SA case study.
 
 ## Repository Structure
 
 ```
 .
 ├── README.md
-├── Proposal/                         # The proposal itself
-│   └── PhD_Proposal_Skeleton.md      #   section-by-section skeleton (10-12 pg budget)
-├── References/                       # Bibliography and reading
-│   └── References.bib                #   BibTeX (natbib author-year)
+├── assets/
+│   └── ufs_logo.png                  # University of the Free State crest
+├── Proposal/
+│   └── PhD_Proposal_Skeleton.md      # section-by-section skeleton (10-12 pg budget)
+├── References/
+│   └── References.bib                # BibTeX (natbib author-year)
 └── Offer/                            # Admission correspondence (to be added)
 ```
 
@@ -77,35 +98,35 @@ route, not proved theorems. The current working draft is `Proposal/PhD_Proposal_
 
 | Section | Title | Content |
 |---------|-------|---------|
-| — | Abstract | The product, the RBSDE, the two complications, the method, the headline result |
-| 1 | Introduction and Background | Variable annuities, the surrender option, positioning vs. the MSc |
-| 2 | Problem Statement and Research Gap | RBSDEs under stochastic mortality + incompleteness are under-developed |
-| 3 | Research Questions and Objectives | RQ1–RQ4 mapped to the theorems |
-| 4 | Literature Landscape | RBSDEs, optional decomposition, stochastic mortality, VAs, deep BSDE |
-| 5 | Mathematical Formulation | Snell envelope, the reflected BSDE, the mortality-intensity setup |
-| 6 | Methodology | Theory / numerical / validation tracks |
-| 7 | Theoretical Contributions | T1 well-posedness, T2 duality, T3 convergence, (T4 robust extension) |
-| 8 | Computational Plan | Deep solver, reproducibility, open-source deliverable |
+| — | Abstract | VA guarantees, nested-MC cost, the DNN emulator, UQ, the headline result |
+| 1 | Introduction and Background | Variable annuities, nested simulation, emulation, positioning vs. the MSc |
+| 2 | Problem Statement and Research Gap | Emulation exists; *calibrated uncertainty* under stochastic mortality does not |
+| 3 | Research Questions and Objectives | RQ1–RQ4 mapped to the contributions |
+| 4 | Literature Landscape | VA valuation, NN emulators (Hejazi, Gan–Lin), stochastic mortality, UQ / conformal |
+| 5 | Model Specification | Input vector (policy / financial / mortality), output Y, predictive intervals |
+| 6 | Methodology | Emulation / UQ / validation tracks |
+| 7 | Statistical Contributions | Calibration & coverage guarantees; emulation error; uncertainty decomposition |
+| 8 | Computational Plan | Nested-MC label generation, surrogate training, reproducibility |
 | 9 | Data | HMD, a VA contract spec, optional SA case study |
 | 10 | Significance and Contribution | Theory, method, practice; publication and competition targets |
-| 11 | Timeline | Three-year plan mapped to the theorems and three papers |
+| 11 | Timeline | Three-year plan mapped to the contributions and three papers |
 | 12 | Ethical Considerations | Public/aggregated data only; UFS ethics clearance |
 | — | References | Author-year, accuracy emphasised |
 
 ## How to Cite
 
 ```
-Baloyi, T.B.J. (2027). Reflected BSDEs and Optimal Stopping for Variable-Annuity Surrender
-Guarantees: Super-Replication under Stochastic Mortality in Incomplete Markets. PhD research
-proposal, University of the Free State.
+Baloyi, T.B.J. (2027). Deep Neural Network Emulation and Uncertainty Quantification for
+Variable-Annuity Guarantee Valuation under Stochastic Mortality. PhD research proposal,
+University of the Free State.
 ```
 
 ## Keywords
 
-reflected BSDE, optimal stopping, Snell envelope, optional decomposition, super-hedging,
-variable annuity, surrender option, stochastic mortality, incomplete markets, deep BSDE,
-deep optimal stopping
+variable annuity, guarantee valuation, nested Monte Carlo, deep neural network emulator,
+surrogate model, uncertainty quantification, conformal prediction, calibrated prediction
+intervals, stochastic mortality, GMAB, GMDB, GMWB
 
 ## Licence
 
-All rights reserved under the intellectual property policy of the awarding institution.
+All rights reserved under the intellectual property policy of the University of the Free State.
