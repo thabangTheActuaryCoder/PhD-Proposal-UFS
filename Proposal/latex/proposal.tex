@@ -46,6 +46,7 @@
 
 	\begin{tabular}{@{}ll@{}}
 		CRPS  & Continuous ranked probability score \\
+		CTE   & Conditional tail expectation \\
 		DoE   & Design of experiments \\
 		DNN   & Deep neural network \\
 		GMAB  & Guaranteed minimum accumulation benefit \\
@@ -60,6 +61,7 @@
 		PV    & Present value \\
 		UQ    & Uncertainty quantification \\
 		VA    & Variable annuity \\
+		VaR   & Value-at-risk \\
 	\end{tabular}
 
 	\newpage
@@ -167,6 +169,17 @@
 	again. Introducing stochastic mortality adds state variables and, for
 	longer-memory specifications, destroys the Markov property, so that standard
 	variance-reduction and dynamic-programming shortcuts no longer apply directly.
+
+	\textbf{Risk management and reserving of guarantees.} \citet{FengYi2019}
+	formalise the insurer's net liability as the present value of guarantee
+	cashflows less the rider fee income collected from the account, and compare the
+	two standard risk-management approaches for it: stochastic reserving based on
+	risk measures such as value-at-risk (VaR) and the conditional tail expectation
+	(CTE), and dynamic hedging. Their net-liability formulation and their VaR and
+	CTE measures define, respectively, the valuation target of this project and the
+	capital figures used to judge the practical value of its uncertainty
+	quantification; in the tractable GMAB case under geometric Brownian motion they
+	also obtain closed-form risk measures that serve as a known-answer benchmark.
 
 	\textbf{Emulation and metamodelling of VA portfolios.}
 	\citet{HejaziJackson2016} introduced a neural-network approach to the efficient
@@ -376,8 +389,9 @@
 	taken to be independent given their drivers, so valuation is carried out under
 	the product measure, written $\mathbb{Q}$ for brevity. The account value evolves
 	as $F_t = S_t e^{-ct}$ under a continuous fee $c$, and the guarantee generates a
-	discounted cashflow stream $\Pi$ determined by the maturity, death and surrender
-	benefits described in Section 2.
+	net discounted cashflow stream $\Pi$, namely the guarantee benefits less the
+	rider fee income in the sense of \citet{FengYi2019}, determined by the maturity,
+	death and surrender benefits described in Section 2.
 
 	Collect in a single state vector $x\in\mathcal{X}\subset\mathbb{R}^d$ the three
 	feature blocks that determine the liability:
@@ -490,8 +504,13 @@
 	the LSMC prices of \citet{LiLyu2026} and \citet{LangreneEtAl2026} on comparable
 	contracts. Calibration quality is assessed by empirical coverage, mean interval
 	width, the continuous ranked probability score and reliability diagrams.
-	Reserves and a solvency-capital proxy are then computed with and without the
-	quantified uncertainty to show its practical effect.
+	Reserves and solvency capital are then computed from the emulated loss
+	distribution using the value-at-risk and conditional-tail-expectation measures
+	of \citet{FengYi2019}, with and without the quantified uncertainty, to show its
+	practical effect. In the tractable GMAB case under geometric Brownian motion,
+	the closed-form risk measures of \citet{FengYi2019} provide a known-answer
+	benchmark for the emulator, complementing the nested Monte Carlo and LSMC
+	comparisons.
 
 	\subsubsection{Empirical Application}
 	Mortality is calibrated to the Human Mortality Database, with an optional South
