@@ -1,27 +1,37 @@
-% ============================================================
-% Compile with XeLaTeX (system fonts are used).
-%   xelatex proposal.tex ; bibtex proposal ; xelatex ; xelatex
-% ============================================================
 % !TeX program = xelatex
-% !TeX root = proposal.tex
-%
-% UFS PhD research proposal. Section structure follows the BITM / UFS
-% Department of Computer Science & Informatics proposal template (v4).
-% Section 9 is restructured around the mathematical framework and the actual
-% work phases, because this proposal develops and then tests statistical
-% guarantees rather than running an applied data-mining cycle.
-%
-% Build the cover first (one page):
-%   cd ../cover && xelatex cover.tex
+% UFS PhD research proposal. Standalone build; the UFS title page is included as a PDF.
+% Build the cover first:  cd ../cover && xelatex cover.tex
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{booktabs,longtable,array}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{csquotes}
+\usepackage{pdfpages}
 
-\PassOptionsToPackage{final}{graphicx}
-\documentclass[12pt,final]{article}
+\onehalfspacing
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{PhD Research Proposal}
+\lhead{Variable Annuity Valuation under Stochastic Mortality}
+\cfoot{\thepage}
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{0.35em}
+\setlength{\headheight}{15pt}
 
-\usepackage{msc_body_style}
-\usepackage{changepage}
-\usepackage{mathtools}
+\newtheorem{assumption}{Assumption}
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
 
-% --- Mathematical shorthands ---
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\Pp}{\mathbb{P}}
 \newcommand{\Q}{\mathbb{Q}}
@@ -37,741 +47,950 @@
 
 \begin{document}
 
-	% =============================================================
-	% Cover / title page (built separately, included as PDF)
-	% =============================================================
-	\includepdf[pages=1]{../cover/cover.pdf}
-
-	\clearpage
-	\pagenumbering{roman}
-
-	\renewcommand{\contentsname}{Table of Contents}
-	\tableofcontents
-	\newpage
-
-	\renewcommand{\listfigurename}{List of Figures}
-	\listoffigures
-
-	\renewcommand{\listtablename}{List of Tables}
-	\listoftables
-	\newpage
-
-	\section*{List of Abbreviations}
-	\addcontentsline{toc}{section}{List of Abbreviations}
-
-	\begin{tabular}{@{}ll@{}}
-		CIR   & Cox-Ingersoll-Ross \\
-		CQR   & Conformalized quantile regression \\
-		CRPS  & Continuous ranked probability score \\
-		CTE   & Conditional tail expectation \\
-		DNN   & Deep neural network \\
-		DoE   & Design of experiments \\
-		GMAB  & Guaranteed minimum accumulation benefit \\
-		GMDB  & Guaranteed minimum death benefit \\
-		GMIB  & Guaranteed minimum income benefit \\
-		GMMB  & Guaranteed minimum maturity benefit \\
-		GMWB  & Guaranteed minimum withdrawal benefit \\
-		GMxB  & Guaranteed minimum benefit (generic rider) \\
-		GRU   & Gated recurrent unit \\
-		HMD   & Human Mortality Database \\
-		LHS   & Latin hypercube sampling \\
-		LSMC  & Least-squares Monte Carlo \\
-		MAE   & Mean absolute error \\
-		MAPE  & Mean absolute percentage error \\
-		MC    & Monte Carlo \\
-		NLL   & Negative log-likelihood \\
-		OOD   & Out of distribution \\
-		PV    & Present value \\
-		RMSE  & Root mean squared error \\
-		SDE   & Stochastic differential equation \\
-		SE    & Standard error \\
-		UQ    & Uncertainty quantification \\
-		VA    & Variable annuity \\
-		VaR   & Value-at-risk \\
-	\end{tabular}
-
-	\newpage
-
-	\section*{Glossary}
-	\addcontentsline{toc}{section}{Glossary}
-
-	\begin{description}
-		\item[Aleatoric uncertainty] The irreducible component of predictive error, here the Monte Carlo noise of the simulated labels and the genuine financial and mortality randomness.
-		\item[Emulator (surrogate)] A fast approximating function, learned from expensively computed examples, that replaces a costly valuation routine.
-		\item[Epistemic uncertainty] The reducible component of predictive error attributable to the emulator itself: its approximation and estimation error.
-		\item[Fair fee] The rider fee rate that sets the time-zero value of the full contract equal to the premium invested.
-		\item[Marginal coverage] A coverage probability averaged over calibration samples, as distinct from coverage conditional on the realised calibration sample.
-		\item[Nested Monte Carlo] Valuation by an outer layer of scenarios, each carrying an inner layer of risk-neutral paths; the industry reference for guarantee valuation.
-		\item[Net liability] The present value of guarantee benefits less the present value of the rider fee income that funds them.
-		\item[Volterra process] A stochastic process driven through a fractional kernel, able to exhibit roughness or long-range dependence and generally non-Markovian.
-	\end{description}
-
-	\newpage
-	\pagenumbering{arabic}
-
-	% ============================================================
-	\section{Introduction} % Approx. 1.5 pages
-
-	A variable annuity (VA) is a long-term insurance contract in which the
-	policyholder participates in the performance of an investment fund while the
-	insurer provides one or more embedded guarantees. Common guarantees include the
-	guaranteed minimum maturity, death, accumulation, income and withdrawal benefits
-	(GMMB, GMDB, GMAB, GMIB, GMWB). These benefits have option-like features, but
-	their valuation differs materially from that of a traded derivative because the
-	insurance cashflows also depend on survival, death, withdrawals, surrender and
-	other policyholder states \citep{BauerKlingRuss2008, FengYi2019}. The liability
-	is therefore exposed jointly to equity, interest-rate and mortality risk, it is
-	frequently high-dimensional and path-dependent, and once realistic dynamics are
-	assumed it has no closed form.
-
-	The industry reference for valuation is Monte Carlo, and often nested Monte
-	Carlo, simulation: an outer layer generates economic or capital scenarios and an
-	inner layer estimates the present value of future guarantee cashflows conditional
-	on each outer scenario \citep{GanValdez2018}. The cost is the product of the two
-	layers and grows sharply with the dimension of the state, so that revaluing a
-	book of many contracts daily, under many stresses, for pricing, hedging and
-	capital, is computationally demanding. When the policyholder can surrender or
-	withdraw optimally, the valuation becomes an optimal stopping or stochastic
-	control problem \citep{LuoShevchenko2015}, which is more expensive still.
-
-	Emulation, or metamodelling, is the established response: the valuation function
-	is learned once, from a designed set of expensively computed examples, and then
-	evaluated cheaply wherever it is needed \citep{HejaziJackson2016, GanLin2015,
-	GanValdez2018}. Neural networks are a natural choice because they approximate
-	high-dimensional nonlinear maps without hand-crafted basis functions and value a
-	whole portfolio in a single forward pass. The limitation of this literature is
-	that it returns point estimates. For actuarial risk management the uncertainty
-	around the estimate is itself economically important: a reserve, a hedge or a
-	capital figure based on a surrogate should report not only the predicted
-	liability but also how far it can be trusted.
-
-	The central theme of this PhD is therefore the combination
-	\begin{equation}
-		\text{stochastic mortality} + \text{VA valuation} + \text{deep emulation}
-		+ \text{uncertainty quantification}.
-	\end{equation}
-	The project treats the VA pricing functional, the stochastic mortality model, the
-	simulation estimator and the neural-network emulator as linked stochastic objects
-	rather than as a generic prediction pipeline, and places uncertainty
-	quantification at the centre. It also builds on the candidate's MSc, which
-	developed deep-learning methods for hedging path-dependent claims in incomplete
-	markets, and redirects that craft toward emulation and uncertainty quantification
-	for insurance guarantees carrying mortality risk.
-
-	% ============================================================
-	\section{Background} % Approx. 2.5 pages
-
-	\textbf{Variable-annuity guarantees and nested valuation.}
-	\citet{BauerKlingRuss2008} value the various guaranteed minimum benefits within a
-	single nested-simulation architecture. A typical contract invests the premium in
-	a fund, deducts a continuous fee, and promises a guarantee level $G$; the maturity
-	benefit is $\max(G,A_T)$ on survival, the death benefit $\max(G,A_\tau)$ on death
-	at $\tau<T$, and surrender returns the account net of a charge. It is the embedded
-	shortfall options, not the account itself, that the insurer reserves against.
-
-	\textbf{Risk management and reserving of guarantees.} \citet{FengYi2019} formalise
-	the insurer's net liability as the present value of guarantee cashflows less the
-	rider fee income collected from the account, and compare the two standard
-	risk-management approaches: stochastic reserving based on risk measures such as
-	value-at-risk (VaR) and the conditional tail expectation (CTE), and dynamic
-	hedging. Their net-liability formulation and their VaR and CTE measures define,
-	respectively, the valuation target of this project and the capital figures used to
-	judge the practical value of its uncertainty quantification; in tractable cases
-	they also obtain closed-form risk measures that serve as a known-answer benchmark.
-
-	\textbf{Emulation and metamodelling of VA portfolios.} \citet{HejaziJackson2016}
-	introduced a neural-network approach to the efficient valuation of large VA
-	portfolios, and \citet{GanLin2015, GanLin2018} developed a complementary
-	metamodelling programme, including functional-data and two-level designs for both
-	values and Greeks. \citet{GanValdez2018} provide a synthetic-data framework for
-	nested stochastic valuation of large portfolios. This literature establishes the
-	feasibility and accuracy of emulation but returns point estimates under static
-	mortality.
-
-	\textbf{Deep learning solvers for VA valuation.} \citet{LiLyu2026} price a VA with
-	an early-surrender option under a rough-Heston equity model and a Volterra
-	stochastic-mortality model using a deep signature least-squares Monte Carlo scheme,
-	and decompose the pricing error into Monte Carlo, time-discretisation,
-	signature-truncation and neural-network-approximation parts. \citet{LangreneEtAl2026}
-	extend deep LSMC to the GMWB under optimal dynamic withdrawal and construct
-	confidence intervals for the contract value. Both are per-contract solvers that
-	quantify only the Monte Carlo estimator error of a single price.
-
-	\textbf{Stochastic mortality.} The Lee-Carter model \citep{LeeCarter1992} remains
-	the reference for mortality forecasting, affine stochastic-intensity models
-	\citep{Biffis2005} provide tractable continuous-time dynamics, and the
-	Cairns-Blake-Dowd model \citep{CairnsBlakeDowd2006} explicitly incorporates
-	parameter uncertainty. \citet{BallottaHaberman2006} value guaranteed annuity
-	options under a stochastic mortality environment, establishing a precedent for
-	integrated financial and mortality valuation, and \citet{Wang2021} develop a
-	Volterra mortality model with long-range dependence. These establish that
-	mortality risk is not limited to the randomness of future deaths: uncertainty
-	about the mortality process and its parameters is itself material.
-
-	\textbf{Stochastic control and least-squares Monte Carlo.} For dynamic withdrawals
-	and surrender the valuation is a stochastic control problem. The least-squares
-	Monte Carlo method \citep{LongstaffSchwartz2001} approximates continuation values
-	by regression, and \citet{LuoShevchenko2015} apply stochastic control to GMWB and
-	GMDB. Replacing the regression basis by a neural network extends the method to high
-	dimensions.
-
-	\textbf{Uncertainty quantification.} Deep ensembles \citep{Lakshminarayanan2017},
-	Monte-Carlo dropout as approximate Bayesian inference \citep{GalGhahramani2016}, and
-	the aleatoric/epistemic decomposition \citep{KendallGal2017} supply an uncertainty
-	representation. Conformal prediction \citep{Vovk2005, Lei2018} and conformalized
-	quantile regression \citep{RomanoEtAl2019} add distribution-free, finite-sample
-	coverage, and proper scoring rules \citep{GneitingRaftery2007} assess calibration
-	and sharpness together. The synthesis pursued here, a neural VA emulator whose
-	predictive intervals are uncertainty-decomposed and conformally certified under
-	stochastic mortality, sits at the intersection of these strands.
-
-	% ============================================================
-	\section{Research Gaps} % Approx. 0.5 page
-
-	The recent deep-LSMC methods are per-contract solvers that quantify only Monte
-	Carlo estimator error; the cross-sectional emulators return point values under
-	static mortality and no uncertainty. No existing method delivers a VA-guarantee
-	emulator that (i) ingests a stochastic-mortality state as a first-class input,
-	(ii) returns a distribution-free, finite-sample coverage-guaranteed predictive
-	interval for the guarantee value, and (iii) decomposes that interval into the
-	Monte Carlo, mortality, parameter, approximation and estimation components. This
-	work uses the LSMC solvers and the calibrated Volterra mortality dynamics of
-	\citet{LiLyu2026} and \citet{Wang2021} as the nested-simulation ground truth and
-	benchmark, not as competitors.
-
-	% ============================================================
-	\section{Research Problem and Statement} % Approx. 1 page
-
-	Let $X$ denote the full state of a VA contract, and suppose the actuarial valuation
-	target is
-	\begin{equation}
-		V(x) = \E^{\Q}\!\left[H \mid X_0 = x\right],
-		\label{eq:valuation-generic}
-	\end{equation}
-	where $H$ is the discounted future net liability. In realistic settings $H$ depends
-	on a high-dimensional stochastic path and $V(x)$ has no analytic form, so a Monte
-	Carlo estimator
-	\begin{equation}
-		\widehat V_M(x) = \frac{1}{M}\sum_{m=1}^{M} H^{(m)}(x)
-		\label{eq:mc-estimator}
-	\end{equation}
-	is used as the benchmark. A deep neural network $f_\theta$ emulates
-	$x\mapsto V(x)$, giving $\widehat V_{\mathrm{NN}}(x) = f_\theta(x)$. The difficulty
-	is that the training target \eqref{eq:mc-estimator} is itself noisy and the fitted
-	emulator has finite-sample and approximation error, so the total uncertainty is not
-	a single quantity. It decomposes schematically as
-	\begin{equation}
-		\mathcal U_{\mathrm{total}} = \mathcal U_{\mathrm{MC}} + \mathcal U_{\mathrm{mort}}
-		+ \mathcal U_{\mathrm{param}} + \mathcal U_{\mathrm{NN}} + \mathcal U_{\mathrm{spec}},
-		\label{eq:uncertainty-components}
-	\end{equation}
-	with terms for Monte Carlo error, mortality-process uncertainty,
-	parameter-estimation uncertainty, neural-network uncertainty and
-	model-specification uncertainty. The problem is to quantify, calibrate and propagate
-	these components into actuarial decision quantities, so that the emulator reports an
-	interval with a certified probability of containing the true value.
-
-	% ============================================================
-	\section{Thesis Statement (PhD only)} % Approx. 1-2 sentences
-
-	A deep neural network can emulate the present value of a VA guarantee liability
-	under stochastic mortality to an accuracy comparable with the Monte Carlo error of
-	its training labels, and its predictions can be equipped with distribution-free,
-	finite-sample coverage-guaranteed intervals whose Monte Carlo, mortality, parameter
-	and surrogate components are separately identified and propagated to reserves,
-	capital and hedge sensitivities.
-
-	% ============================================================
-	\section{Research Aim} % Approx. 0.5 page
-
-	To develop and evaluate a deep neural-network emulation framework with
-	statistically rigorous uncertainty quantification for variable-annuity guarantee
-	valuation under stochastic mortality, and to establish the error decomposition and
-	convergence guarantees that make its predictive intervals trustworthy for pricing,
-	hedging and capital.
-
-	% ============================================================
-	\section{Research Questions and Objectives} % Approx. 1.5 pages
-
-	\textbf{RQ1.} How accurately can a deep neural network emulate VA guarantee values
-	when mortality is stochastic rather than deterministic?
-
-	\textbf{RQ2.} How large is the computational saving relative to full Monte Carlo or
-	nested simulation, at a given actuarial accuracy?
-
-	\textbf{RQ3.} Which uncertainty-quantification methods give the best-calibrated and
-	sharpest predictive distributions for VA liabilities?
-
-	\textbf{RQ4.} How should total valuation uncertainty be decomposed into Monte Carlo,
-	mortality, parameter and approximation components, and propagated to reserves, VaR
-	and CTE?
-
-	\textbf{RQ5.} How sensitive are values and predictive intervals to the choice and
-	calibration of the stochastic mortality model?
-
-	\textbf{RQ6.} Do the intervals remain reliable in tail regions, stressed markets and
-	policy states that are sparse in the training design?
-
-	\medskip
-	\textbf{Objective 1.} Formulate a stochastic actuarial model for VA guarantees in
-	which financial and mortality risks evolve dynamically.
-
-	\textbf{Objective 2.} Construct a high-fidelity Monte Carlo or LSMC benchmark
-	valuation engine and characterise its statistical error.
-
-	\textbf{Objective 3.} Develop deep neural-network emulators for policy-level and
-	portfolio-level liability valuation.
-
-	\textbf{Objective 4.} Quantify uncertainty using heteroscedastic likelihoods,
-	ensembles, bootstrap, Monte Carlo dropout and conformal prediction, separating the
-	components of \eqref{eq:uncertainty-components} where possible.
-
-	\textbf{Objective 5.} Establish an error decomposition and convergence or consistency
-	conditions for the emulator trained on noisy Monte Carlo targets.
-
-	\textbf{Objective 6.} Evaluate calibration, coverage, sharpness, tail reliability and
-	robustness under distribution shift, and propagate uncertainty to reserves, capital
-	and hedge sensitivities.
-
-	% ============================================================
-	\section{Hypotheses (Optional)} % Approx. 0.5 page
-
-	These are falsifiable conjectures. \textbf{H1:} deep emulators reduce the cost of
-	repeated VA valuation by orders of magnitude while keeping pricing error materially
-	small relative to a high-fidelity benchmark. \textbf{H2:} explicitly probabilistic
-	or ensemble-based networks give materially better-calibrated uncertainty than
-	deterministic networks with ad hoc error bands. \textbf{H3:} stochastic mortality
-	and mortality-parameter uncertainty have a non-negligible effect on predictive
-	uncertainty even where their effect on the mean fee is modest. \textbf{H4:}
-	tail-focused training and calibration improve reliability for high-liability policies
-	and stressed states without materially sacrificing overall accuracy.
-
-	% ============================================================
-	\section{Research Design and Methodology} % Approx. 10-12 pages
-
-	\subsection{Introduction}
-	The source template frames the research design through Saunders' research onion and a
-	CRISP-DM cycle, which suit applied information-systems and data-mining work. This
-	proposal develops a mathematical framework and statistical guarantees and then tests
-	them, so the design is stated directly and the mathematics is set out below before
-	the work phases. The deviation is deliberate.
-
-	\subsection{Research Philosophy}
-	The work is quantitative and model-based. Results are derived from stated assumptions
-	and then checked against controlled simulation and data, with risk-neutral pricing
-	assumptions kept separate from historical estimation.
-
-	\subsection{Approach to Theory Development}
-	Deductive. Error decompositions, coverage and convergence results are derived from
-	explicit assumptions and then verified numerically. Simulation supports a proof; it
-	does not replace one.
-
-	\subsection{Methodological Choice}
-	Quantitative throughout: mathematical analysis, controlled simulation against
-	nested Monte Carlo ground truth, and an empirical application calibrated to published
-	mortality data.
-
-	\subsection{Research Strategy}
-	Construction of the benchmark engine and the emulator, followed by an uncertainty and
-	coverage analysis with known data-generating laws, followed by an application limited
-	to what the mortality and contract data support.
-
-	\subsection{Time Horizon}
-	Longitudinal in the empirical component: training, calibration and evaluation periods
-	are separated in time so that reported coverage reflects out-of-sample behaviour.
-
-	\subsection{Filtered Probability Space and Pricing Measure}
-	Let $(\Omega,\mathcal F,\mathbb F,\Pp)$ with $\mathbb F=(\mathcal F_t)_{0\le t\le T}$
-	be a filtered probability space satisfying the usual conditions, carrying the
-	financial-market and mortality factors. Let $\Q$ be a risk-neutral measure for
-	hedgeable financial risk. As mortality risk is generally not traded, the pricing
-	measure is taken as the product of the financial risk-neutral measure and a chosen
-	mortality measure under independence \citep{Biffis2005, LiLyu2026}, or more generally
-	as a pricing functional carrying a mortality risk premium.
-
-	\subsection{Financial Market Model}
-	A baseline account model under $\Q$ is
-	\begin{align}
-		\dd S_t &= r_t S_t \dd t + \sigma_t S_t \dd W_t^{S}, \label{eq:asset}\\
-		\dd A_t &= A_t\big[(r_t-\alpha)\dd t + \sigma_t \dd W_t^{S}\big] - \dd C_t,
-		\label{eq:account}
-	\end{align}
-	where $S_t$ is the reference fund, $A_t$ the account value, $r_t$ the short rate,
-	$\alpha$ the total fee rate and $C_t$ cumulative withdrawals. For stochastic
-	volatility a Heston model may be used,
-	\begin{align}
-		\dd S_t &= r_t S_t \dd t + S_t\sqrt{V_t}\,\dd W_t^S, \\
-		\dd V_t &= \kappa_V(\theta_V - V_t)\dd t + \xi\sqrt{V_t}\,\dd W_t^V,
-		\qquad \dd\langle W^S,W^V\rangle_t = \rho\,\dd t,
-	\end{align}
-	and a rough-Heston extension replaces the variance equation by the Volterra form
-	\begin{equation}
-		V_t = V_0 + \int_0^t K_V(t-s)\big[\kappa_V(\theta_V-V_s)\dd s + \xi\sqrt{V_s}\,\dd W_s^V\big],
-		\qquad K_V(u)=\frac{u^{H_V-1/2}}{\Gamma(H_V+1/2)},
-	\end{equation}
-	with $H_V\in(0,1/2)$. In the no-withdrawal case the fee-deducted account reduces to
-	$A_t = S_t\exp(-\alpha t)$.
-
-	\subsection{Stochastic Interest Rates}
-	Where stochastic rates are required, a Cox-Ingersoll-Ross specification may be used,
-	\begin{equation}
-		\dd r_t = \kappa_r(\theta_r - r_t)\dd t + \sigma_r\sqrt{r_t}\,\dd W_t^r,
-		\qquad 2\kappa_r\theta_r \ge \sigma_r^2,
-	\end{equation}
-	with stochastic discount factor
-	\begin{equation}
-		D(t,u) = \exp\!\Big(-\!\int_t^u r_s\,\dd s\Big).
-		\label{eq:discount}
-	\end{equation}
-
-	\subsection{Mortality Intensity and Survival}
-	Let $\tau_x$ be the future lifetime of a policyholder aged $x$ and $\mu_{x+t}$ the
-	stochastic force of mortality. Conditional on the mortality filtration $\mathcal G_t$,
-	\begin{equation}
-		{}_{u-t}p_{x+t} = \Pp(\tau_x>u\mid\mathcal G_t)
-		= \E\!\left[\exp\!\Big(-\!\int_t^u \mu_{x+s}\,\dd s\Big)\,\Big|\,\mathcal G_t\right].
-		\label{eq:survival}
-	\end{equation}
-	A tractable baseline diffusion is
-	\begin{equation}
-		\dd\mu_t = \kappa_\mu(\theta_\mu - \mu_t)\dd t + \sigma_\mu\,g(\mu_t)\,\dd W_t^\mu,
-		\label{eq:mortality-diffusion}
-	\end{equation}
-	with $g$ chosen to preserve positivity. A more advanced specification with long-range
-	dependence \citep{Wang2021, LiLyu2026} is the Volterra mortality model
-	\begin{equation}
-		\mu_{x+t} = \mu_x + \int_0^t K_\mu(t-u)\,b(\mu_{x+u})\dd u
-		+ \int_0^t K_\mu(t-u)\,\sigma(\mu_{x+u})\dd B_u,
-		\qquad K_\mu(u)=\frac{u^{H_\mu-1/2}}{\Gamma(H_\mu+1/2)},
-		\label{eq:volterra}
-	\end{equation}
-	for which $H_\mu>1/2$ induces long-range dependence and $H_\mu=1/2$ recovers the
-	Markovian limit. On a grid $0=t_0<\cdots<t_N$, survival along a simulated path is
-	approximated by the trapezoidal rule,
-	\begin{equation}
-		{}_{t_n}p_x^{(m)} \approx \exp\!\Big\{-\tfrac{\Delta t}{2}\sum_{k=0}^{n-1}
-		\big(\mu_{x+t_k}^{(m)} + \mu_{x+t_{k+1}}^{(m)}\big)\Big\}.
-	\end{equation}
-
-	\subsection{Mortality Calibration and Parameter Uncertainty}
-	Given observed cohort survival proportions $\ell_{x+s}/\ell_x$, parameters
-	$\vartheta_\mu$ are estimated by nonlinear least squares,
-	\begin{equation}
-		\widehat\vartheta_\mu = \argmin_{\vartheta_\mu\in\Theta_\mu}
-		\frac1N\sum_{s=1}^{N}\Big[\,{}_sp_x(\vartheta_\mu) - \frac{\ell_{x+s}}{\ell_x}\Big]^2,
-	\end{equation}
-	and parameter uncertainty is studied by nonparametric or parametric bootstrap or by
-	Bayesian posterior sampling \citep{CairnsBlakeDowd2006}.
-
-	\subsection{Guaranteed Benefits and Net Liability}
-	For a maturity guarantee $G_T$, the gross GMMB liability is
-	\begin{equation}
-		L_T^{\mathrm{GMMB}} = \ind_{\{\tau_x>T\}}\,D(0,T)\,(G_T - A_T)^+,
-	\end{equation}
-	and for a death benefit $G^D$,
-	\begin{equation}
-		L^{\mathrm{GMDB}} = \ind_{\{\tau_x\le T\}}\,D(0,\tau_x)\,(G^D_{\tau_x} - A_{\tau_x})^+ .
-	\end{equation}
-	A combined guarantee is $H = L_T^{\mathrm{GMMB}} + L^{\mathrm{GMDB}}$. If fees at rate
-	$\alpha_g$ fund the guarantee, the discounted fee income is
-	$I = \alpha_g\int_0^{T\wedge\tau_x} D(0,t)\,A_t\,\dd t$, and the net liability is
-	\begin{equation}
-		L = H - I.
-		\label{eq:net-liability}
-	\end{equation}
-	The gross-versus-net distinction matters because adverse markets raise guarantee costs
-	and reduce fee income simultaneously \citep{FengYi2019}.
-
-	\subsection{Market-Consistent Valuation and the Fair Fee}
-	The fair value is $V_0 = \E^{\Q}[L\mid\mathcal F_0]$, and the fair fee $c^\star$
-	solves $U_0(c^\star)=A_0$, where $U_0(c)$ is the value of the full contract under fee
-	$c$; monotonicity of $U_0$ permits a bisection solution.
-
-	\subsection{Optimal Stopping and Stochastic Control}
-	Contracts with surrender or dynamic withdrawals are formulated on a decision grid
-	$0=t_0<\cdots<t_N=T$ with state $X_n$ and control $\pi_n\in\mathcal A_n(X_n)$ and
-	controlled transition $X_{n+1}=\mathcal T_n(X_n,\pi_n,Z_{n+1})$. Writing
-	$\beta_{n,n+1}=D(t_n,t_{n+1})$, the value function satisfies the Bellman recursion
-	\begin{equation}
-		V_n(x) = \sup_{\pi\in\mathcal A_n(x)}\Big\{ R_n(x,\pi)
-		+ \E^{\Q}\!\big[\beta_{n,n+1}V_{n+1}(X_{n+1})\mid X_n=x,\pi_n=\pi\big]\Big\},
-		\qquad V_N(x)=R_N(x).
-		\label{eq:bellman}
-	\end{equation}
-	The continuation function
-	$\Phi_n(x,\pi)=\E^{\Q}[\beta_{n,n+1}V_{n+1}(X_{n+1})\mid X_n=x,\pi_n=\pi]$ is
-	approximated by least-squares Monte Carlo \citep{LongstaffSchwartz2001, LuoShevchenko2015},
-	\begin{equation}
-		\beta_{n,n+1}V_{n+1}(X_{n+1}^{(m)}) = f_{\theta_n}(X_n^{(m)},\pi_n^{(m)}) + \varepsilon_n^{(m)},
-	\end{equation}
-	with the regression function $f_{\theta_n}$ taken to be a neural network in high
-	dimensions. For pure surrender with payoff $g_n$, the recursion is
-	$V_n(X_n)=\max\{g_n(X_n),\Phi_n(X_n)\}$ with optimal stopping time
-	$\tau^\star=\inf\{t_n: g_n(X_n)\ge\Phi_n(X_n)\}$.
-
-	\subsection{Monte Carlo Valuation and Statistical Error}
-	For a state $x$ the benchmark estimator is \eqref{eq:mc-estimator}, and conditional on
-	$X=x$,
-	\begin{equation}
-		\E[\widehat V_M(x)\mid x] = V(x),
-		\qquad
-		\Var(\widehat V_M(x)\mid x) = \frac{\sigma_H^2(x)}{M},
-		\qquad \sigma_H^2(x)=\Var(H(x,\omega)\mid X=x),
-		\label{eq:mc-var}
-	\end{equation}
-	with empirical standard error
-	\begin{equation}
-		\widehat{\mathrm{SE}}_{\mathrm{MC}}(x)
-		= \sqrt{\tfrac{1}{M(M-1)}\sum_{m=1}^{M}\big(H^{(m)}(x)-\widehat V_M(x)\big)^2}.
-		\label{eq:mc-se}
-	\end{equation}
-	The supervised response is therefore heteroscedastic across states, and under
-	finite-variance conditions
-	$\sqrt{M}(\widehat V_M(x)-V(x))\xrightarrow{d}\mathcal N(0,\sigma_H^2(x))$. For nested
-	simulation with outer states $Z_i$ and inner draws $Y_{ij}$,
-	$\widehat V_{M,N}=\tfrac1N\sum_i(\tfrac1M\sum_j Y_{ij})$, and the project studies
-	optimal allocation under a fixed budget $B\approx NM$. Antithetic variates, control
-	variates, common random numbers and quasi-Monte Carlo will be used; for a control $C$,
-	$\widehat V_{\mathrm{CV}}=\widehat V_M - b(\overline C_M-\E[C])$ with
-	$b^\star=\Cov(H,C)/\Var(C)$.
-
-	\subsection{Deep Neural Network Emulator}
-	Let $x\in\R^p$ be the transformed state. A feedforward network with $L$ hidden layers
-	is
-	\begin{equation}
-		h^{(0)}=x,\quad h^{(\ell)}=\phi_\ell\big(W^{(\ell)}h^{(\ell-1)}+b^{(\ell)}\big),\ \ell=1,\dots,L,
-		\quad f_\theta(x)=W^{(L+1)}h^{(L)}+b^{(L+1)},
-		\label{eq:dnn}
-	\end{equation}
-	trained by the weighted empirical risk
-	\begin{equation}
-		\widehat\theta = \argmin_\theta \frac1n\sum_{i=1}^{n}
-		w_i\big(\widehat V_{M_i}(x_i)-f_\theta(x_i)\big)^2 + \lambda\,\mathcal R(\theta),
-		\label{eq:nn-loss}
-	\end{equation}
-	where tail liabilities may be upweighted and $\mathcal R$ is a regulariser. When Monte
-	Carlo standard errors are available, an efficient choice is
-	$w_i\propto\widehat{\mathrm{SE}}_{\mathrm{MC}}(x_i)^{-2}$, with small estimated errors
-	stabilised. Writing $f^\star=V$ and
-	$f_{\mathcal F}^\star=\argmin_{f\in\mathcal F}\E[(V(X)-f(X))^2]$, the error splits as
-	\begin{equation}
-		\widehat f(x)-f^\star(x)
-		= \underbrace{\big(\widehat f(x)-f_{\mathcal F}^\star(x)\big)}_{\text{estimation/optimisation}}
-		+ \underbrace{\big(f_{\mathcal F}^\star(x)-f^\star(x)\big)}_{\text{approximation}},
-	\end{equation}
-	with the observed response carrying additional Monte Carlo noise
-	$\widehat V_M(x)=V(x)+\varepsilon_{\mathrm{MC}}(x)$, $\E[\varepsilon_{\mathrm{MC}}(x)\mid x]=0$.
-
-	\subsection{Uncertainty Quantification}
-	For predictive parameter $\Theta$ and data $\mathcal D$, the law of total variance gives
-	\begin{equation}
-		\Var(Y^\star\mid x,\mathcal D)
-		= \underbrace{\E_{\Theta\mid\mathcal D}\big[\Var(Y^\star\mid x,\Theta)\big]}_{\text{aleatoric}}
-		+ \underbrace{\Var_{\Theta\mid\mathcal D}\big[\E(Y^\star\mid x,\Theta)\big]}_{\text{epistemic}},
-		\label{eq:total-variance}
-	\end{equation}
-	with the aleatoric term refined to separate intrinsic path variation from finite Monte
-	Carlo target noise. A Gaussian working model
-	$Y_i\mid X_i=x_i\sim\mathcal N(\mu_\theta(x_i),\sigma_\theta^2(x_i))$ is trained by the
-	heteroscedastic negative log-likelihood
-	\begin{equation}
-		\mathcal L_{\mathrm{NLL}}(\theta)=\frac1n\sum_{i=1}^{n}
-		\Big[\frac{(y_i-\mu_\theta(x_i))^2}{2\sigma_\theta^2(x_i)}+\tfrac12\log\sigma_\theta^2(x_i)\Big],
-		\qquad \sigma_\theta(x)=\log(1+e^{s_\theta(x)})+\epsilon,
-		\label{eq:hetero-nll}
-	\end{equation}
-	with a Student-$t$ likelihood considered for heavy-tailed residuals
-	\citep{KendallGal2017}. A deep ensemble of $K$ networks \citep{Lakshminarayanan2017}
-	gives mean $\overline\mu(x)=\tfrac1K\sum_k\mu_k(x)$ and predictive variance
-	\begin{equation}
-		\widehat\sigma^2_{\mathrm{ens}}(x)=\frac1K\sum_{k=1}^{K}\sigma_k^2(x)
-		+\frac1K\sum_{k=1}^{K}\mu_k^2(x)-\overline\mu^2(x),
-		\label{eq:ensemble-var}
-	\end{equation}
-	and Monte-Carlo dropout \citep{GalGhahramani2016} and bootstrap networks provide
-	complementary estimates, the bootstrap also resampling mortality parameters or data to
-	propagate $\mathcal U_{\mathrm{param}}$ and $\mathcal U_{\mathrm{mort}}$. For
-	distribution-free coverage, split-conformal calibration \citep{Lei2018} uses residuals
-	$r_i=|y_i-\widehat f(x_i)|$ and a quantile $\widehat q_{1-\alpha}$ to form
-	$C_{1-\alpha}(x)=[\widehat f(x)-\widehat q_{1-\alpha},\widehat f(x)+\widehat q_{1-\alpha}]$,
-	while conformalized quantile regression \citep{RomanoEtAl2019} calibrates estimated
-	conditional quantiles with scores
-	$R_i=\max\{\widehat q_{\alpha/2}(x_i)-y_i,\ y_i-\widehat q_{1-\alpha/2}(x_i)\}$ to adapt
-	interval width to heteroscedasticity. A structural point is that exchangeability holds
-	by construction here, because the design states are sampled independently, in contrast
-	to the dependent time-series setting.
-
-	\subsection{Error Decomposition and Convergence Targets}
-	A central theoretical objective is to establish an error decomposition of the form
-	\begin{equation}
-		\big|\widehat V_{\mathrm{final}}(x)-V(x)\big|
-		\le E_{\mathrm{MC}}(x) + E_{\mathrm{time}}(x) + E_{\mathrm{mort}}(x)
-		+ E_{\mathrm{approx}}(x) + E_{\mathrm{est}}(x) + E_{\mathrm{opt}}(x),
-		\label{eq:master-error}
-	\end{equation}
-	whose terms are Monte Carlo sampling, time discretisation, mortality discretisation or
-	calibration, neural-network approximation, statistical estimation and numerical
-	optimisation error; a truncated-signature extension adds a term $E_{\mathrm{sig}}(K)$.
-	The target result gives conditions under which the controllable terms vanish as
-	simulation size, time resolution, signature depth and network capacity increase in a
-	controlled sequence, yielding $L^2(P_X)$ consistency
-	\begin{equation}
-		\int \big|\widehat f_n(x)-V(x)\big|^2\,\dd P_X(x)\xrightarrow{P}0
-		\label{eq:l2-consistency}
-	\end{equation}
-	under compactness or tail control of $X$, universal approximation of the network class,
-	vanishing optimisation error and increasing simulation accuracy.
-
-	\subsection{Actuarial Risk Measures and Hedging Sensitivities}
-	For the runoff net liability $L$ and level $\alpha\in(0,1)$,
-	\begin{equation}
-		\VaR_\alpha(L)=\inf\{\ell\in\R:\Pp(L\le\ell)\ge\alpha\},
-		\qquad
-		\CTE_\alpha(L)=\E[L\mid L>\VaR_\alpha(L)],
-		\label{eq:var-cte}
-	\end{equation}
-	and the effect of emulator uncertainty is studied through
-	$\Delta_{\mathrm{VaR}}=\VaR_\alpha(\widehat L_{\mathrm{NN}})-\VaR_\alpha(L)$ and its CTE
-	analogue across simulation replicates and stresses. For a differentiable emulator,
-	automatic differentiation yields hedge sensitivities
-	$\Delta_{\mathrm{NN}}=\partial f_\theta/\partial S$,
-	$\Gamma_{\mathrm{NN}}=\partial^2 f_\theta/\partial S^2$,
-	$\nu_{\mathrm{NN}}=\partial f_\theta/\partial\sigma$ and a mortality sensitivity
-	$\mathcal M_{\mathrm{NN}}=\partial f_\theta/\partial\mu$, benchmarked against
-	finite-difference Monte Carlo estimators with common random numbers.
-
-	\subsection{Experimental Design and Evaluation}
-	The state vector is
-	$X=(A_0,G_0,x,T,\alpha,r_0,V_0,\mu_x,\vartheta_\mu,\vartheta_{\mathrm{mkt}})$, and design
-	points are drawn by Latin hypercube or space-filling designs, with density augmented
-	near $G_0/A_0\approx 1$ and in stressed regions. The dataset is
-	$\mathcal D=\{(x_i,\widehat V_{M_i}(x_i),\widehat{\mathrm{SE}}_{\mathrm{MC}}(x_i))\}_{i=1}^{n}$,
-	with replicated valuations at selected states to validate the target-noise model. Point
-	accuracy is measured by MAE, RMSE and (where denominators are bounded away from zero)
-	MAPE; interval quality by empirical coverage
-	$\widehat{\mathrm{Cov}}_{1-\alpha}=\tfrac1n\sum_i\ind\{L_i\le y_i\le U_i\}$, mean width,
-	and, conditionally, across strata of age, moneyness, volatility, mortality intensity
-	and liability quantile; and probabilistic accuracy by the negative log score and the
-	continuous ranked probability score \citep{GneitingRaftery2007}
-	\begin{equation}
-		\mathrm{CRPS}(F,y)=\int_{-\infty}^{\infty}\big(F(z)-\ind\{y\le z\}\big)^2\,\dd z .
-	\end{equation}
-	Under distribution shift from $P_{\mathrm{train}}$ to $P_{\mathrm{stress}}$,
-	degradation is $\Delta_{\mathrm{shift}}=\mathcal R_{P_{\mathrm{stress}}}(\widehat f)-\mathcal R_{P_{\mathrm{train}}}(\widehat f)$,
-	and a hybrid fallback uses full simulation when
-	$\widehat\sigma_{\mathrm{pred}}(x)>c_{\mathrm{UQ}}$ or
-	$d(x,\mathcal X_{\mathrm{train}})>c_d$, so the emulator prices ordinary states while the
-	stochastic engine is retained for uncertain ones.
-
-	% ============================================================
-	\section{Validity and Reliability} % Approx. 0.5 page
-
-	\subsection{Validity}
-	Accuracy is judged against nested Monte Carlo ground truth rather than the emulator's
-	own labels; coverage statements are made explicitly marginal or conditional; and tail
-	strata are reported separately because overall RMSE can conceal poor performance where
-	insurer losses are largest.
-
-	\subsection{Reliability}
-	All simulation designs, parameter configurations and random-number seeds are version
-	controlled, Monte Carlo error is reported on every number, paired random numbers reduce
-	the variance of method comparisons, and notebooks regenerate each figure and table.
-
-	% ============================================================
-	\section{Ethical Considerations} % Approx. 0.5 page
-
-	The project uses synthetic policy portfolios and public mortality data (the Human
-	Mortality Database and, where applicable, published South African tables), avoiding
-	identifiable policyholder information, so no participant consent arises. If proprietary
-	data are later introduced, institutional ethics and data-governance requirements of the
-	University of the Free State will be followed.
-
-	% ============================================================
-	\section{Expected Contributions of the Research} % Approx. 1 page
-
-	\subsection{Mathematical Contributions}
-	A formal stochastic representation of the VA net liability under joint financial and
-	stochastic mortality risk; the error decomposition \eqref{eq:master-error} and
-	consistency conditions \eqref{eq:l2-consistency} for an emulator trained on noisy Monte
-	Carlo targets; calibration results for conformal and probabilistic intervals under
-	heteroscedastic simulation noise; a justified allocation of computational budget between
-	design points and inner paths; stability results for emulator-derived hedge
-	sensitivities; and a path-dependent extension combining neural regression with
-	signatures for non-Markovian mortality and volatility. Results are labelled proposed
-	until established.
-
-	\subsection{Actuarial and Practical Contributions}
-	Faster policy-level and portfolio-level valuation; explicit uncertainty intervals around
-	reserves and liabilities; quantified mortality-model risk; improved tail diagnostics;
-	uncertainty-aware VaR and CTE; more stable hedge sensitivities; and a practical rule for
-	when a surrogate should defer to full stochastic simulation, together with an
-	open-source implementation and reproducible benchmarks.
-
-	% ============================================================
-	\section{Limitations of the Study} % Approx. 0.5 page
-
-	Conformal guarantees are marginal rather than conditional and hold under exchangeability
-	of the sampled states; departures from the assumed data-generating model, the restriction
-	to a chosen contract family, and the quality of the mortality calibration all bound what
-	can be claimed. The emulator inherits any bias of the nested-simulation labels, and the
-	South African application is constrained by data availability.
-
-	% ============================================================
-	\section{Timeline} % Approx. 0.5 page
-
-	\begin{table}[H]
-		\centering
-		\caption{Indicative full-time schedule over three years.}
-		\label{tab:timeline}
-		\begin{tabular}{@{}p{2.3cm}p{8.3cm}p{3.2cm}@{}}
-			\toprule
-			\textbf{Months} & \textbf{Main activities} & \textbf{Milestone} \\
-			\midrule
-			1 to 6    & Literature review, contract specification, probability-space setup, mortality calibration, benchmark design & Confirmed framework \\
-			7 to 12   & Monte Carlo engine, variance reduction, convergence analysis, synthetic portfolios & Validated engine \\
-			13 to 18  & Deterministic emulators, baseline comparisons, experimental design & First paper \\
-			19 to 24  & Ensembles, heteroscedastic networks, dropout, bootstrap, conformal calibration & Core UQ paper \\
-			25 to 30  & Mortality-model uncertainty, tail stress testing, hedge sensitivities, VaR/CTE, LSMC extension & Second or third paper \\
-			31 to 36  & Integrate theory and experiment, final robustness, writing and submission & Thesis submission \\
-			\bottomrule
-		\end{tabular}
-	\end{table}
-
-	% ============================================================
-	\section{Budget} % Approx. 0.5 page
-
-	The principal costs are GPU compute for nested-simulation label generation and emulator
-	training, and access to market and mortality data. HMD data are free and GPU costs are
-	modest on rented cloud instances, as in the candidate's MSc. A detailed budget will be
-	priced before final submission.
-
-	% ============================================================
-	\section{Computational Resources} % Approx. 0.5 page
-
-	Implementation uses Python and PyTorch with GPU acceleration, Bayesian hyperparameter
-	optimisation, automatic differentiation for sensitivities, and a seeded, logged nested
-	Monte Carlo label generator. A workstation with a modern GPU, supplemented by rented
-	cloud GPUs for large label runs, is sufficient; no cluster access is assumed.
-
-	% ============================================================
-	\section{Chapter Layout} % Approx. 1 page
-
-	The thesis is planned in nine chapters: (1) introduction, actuarial motivation and
-	research questions; (2) the mathematical framework for VA guarantees and stochastic
-	mortality; (3) high-fidelity Monte Carlo valuation and statistical error analysis; (4)
-	deep neural-network emulation of VA liabilities; (5) uncertainty quantification and
-	conformal calibration; (6) mortality-model uncertainty, stress testing and tail
-	reliability; (7) the optimal-control or GMWB extension using neural LSMC; (8) portfolio
-	aggregation, capital, hedging and actuarial implications; and (9) conclusions and future
-	work. The chapter count is an organisational choice, not a claim about depth.
-
-	% ============================================================
-	% References
-	\clearpage
-	\phantomsection
-	\addcontentsline{toc}{section}{References}
-	\nocite{*}
-	\bibliographystyle{abbrvnat}
-	\bibliography{../../References/References}
+% UFS title page (built separately as a one page PDF)
+\includepdf[pages=1]{../cover/cover.pdf}
+
+\thispagestyle{empty}
+\clearpage
+
+\begin{abstract}
+This proposal develops a mathematical and statistical framework for fast and uncertainty aware valuation of variable annuity (VA) guarantees in the presence of stochastic mortality. Variable annuities combine investment linked accumulation with embedded guarantees such as guaranteed minimum maturity, death, income, accumulation and withdrawal benefits. Realistic valuation is computationally demanding because the liability depends jointly on financial market dynamics, mortality or longevity risk, policyholder behaviour and contract specific guarantee states. In high dimensional settings the benchmark valuation often requires Monte Carlo or nested Monte Carlo simulation, and, when policyholder decisions are endogenous, stochastic optimal control or optimal stopping methods. The proposed research uses a deep neural network as a statistical emulator of a high fidelity actuarial valuation engine while explicitly quantifying the uncertainty introduced by simulation noise, stochastic mortality, parameter estimation and neural network approximation.
+
+The mathematical framework is built on a filtered probability space supporting the financial market and mortality processes. The account value is modelled under a risk neutral measure, with extensions from geometric Brownian motion to stochastic volatility or rough volatility dynamics. Mortality is represented by a stochastic force of mortality, with baseline affine diffusion and more advanced Volterra specifications to capture long range dependence. Survival contingent guarantees are valued as discounted expectations under an appropriate product measure, while contracts with dynamic withdrawals or surrender rights are formulated through Bellman recursion, optimal stopping or least squares Monte Carlo. The emulator learns the conditional valuation map from policy and market state variables to liability values. Uncertainty quantification is then developed using heteroscedastic likelihood networks, deep ensembles, bootstrap procedures, Monte Carlo dropout, conformalized quantile regression and explicit Monte Carlo standard error modelling.
+
+The research will investigate pointwise and portfolio level valuation accuracy, calibration, interval coverage, proper scoring rules, tail reliability, hedge sensitivity stability and robustness under market and mortality distribution shift. The expected contribution is a statistically principled and actuarially interpretable framework that produces fast VA valuations together with defensible uncertainty intervals and model risk diagnostics.
+\end{abstract}
+
+\noindent\textbf{Keywords:} variable annuities; stochastic mortality; deep neural networks; uncertainty quantification; nested Monte Carlo; actuarial valuation; longevity risk; stochastic control; least squares Monte Carlo; conformal prediction.
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction and Background}
+Variable annuities are long term insurance contracts in which the policyholder participates in the performance of an investment fund while the insurer provides embedded guarantees. Common guarantees include the Guaranteed Minimum Maturity Benefit (GMMB), Guaranteed Minimum Death Benefit (GMDB), Guaranteed Minimum Accumulation Benefit (GMAB), Guaranteed Minimum Income Benefit (GMIB) and Guaranteed Minimum Withdrawal Benefit (GMWB). These benefits have option like characteristics, but their valuation differs materially from that of a standard traded derivative because insurance cash flows also depend on survival, death, withdrawals, surrender and other policyholder states.
+
+The combination of market and biometric risks makes variable annuity valuation a natural problem in actuarial mathematics and mathematical statistics. The liability may be strongly nonlinear in the account value, guarantee base, mortality intensity, interest rate, volatility and time to maturity. It may also be path dependent. When the policyholder can surrender or withdraw optimally, the valuation problem becomes an optimal stopping or stochastic control problem rather than a simple expectation.
+
+Classical numerical approaches include tree methods, finite differences, quadrature, dynamic programming and Monte Carlo simulation. As the dimension of the stochastic state increases, deterministic grids become increasingly costly. Recent research therefore turns to least squares Monte Carlo and neural network regression for high dimensional VA pricing. The main limitation is that most neural network metamodels return point estimates. For actuarial risk management, however, the uncertainty around the estimate is itself economically important. A reserve, hedge or capital calculation based on a machine learning surrogate should report not only the predicted liability but also how reliable that prediction is.
+
+The central theme of this PhD is therefore
+\[
+\boxed{\text{Stochastic mortality} + \text{VA valuation} + \text{deep emulation} + \text{uncertainty quantification}.}
+\]
+The project is intended to retain substantial mathematical depth by treating the VA pricing functional, stochastic mortality model, simulation estimator and neural network emulator as linked stochastic objects rather than as a generic prediction pipeline.
+
+\section{Problem Statement}
+Let $X$ denote the full state of a VA contract, including financial variables, mortality variables and policy specific characteristics. Suppose the actuarial valuation target is
+\begin{equation}
+V(x)=\E^{\Q}[H\mid X_0=x],
+\label{eq:valuation-generic}
+\end{equation}
+where $H$ is the discounted future net liability. In realistic VA settings, $H$ may depend on a high dimensional stochastic path, and $V(x)$ cannot be evaluated analytically. A Monte Carlo estimator
+\begin{equation}
+\widehat V_M(x)=\frac{1}{M}\sum_{m=1}^{M}H^{(m)}(x)
+\label{eq:mc-estimator}
+\end{equation}
+is therefore used as the benchmark. However, repeated evaluation of \eqref{eq:mc-estimator} across large portfolios, time steps, stresses and hedging scenarios can be prohibitively expensive.
+
+A deep neural network $f_\theta$ can be trained to emulate the map $x\mapsto V(x)$, yielding
+\begin{equation}
+\widehat V_{\mathrm{NN}}(x)=f_\theta(x).
+\end{equation}
+The key difficulty is that the training target $\widehat V_M(x)$ is itself noisy and the fitted emulator has finite sample and approximation error. Consequently, the total uncertainty is not a single quantity. It may be decomposed schematically as
+\begin{equation}
+\mathcal U_{\mathrm{total}}
+=
+\mathcal U_{\mathrm{MC}}
++
+\mathcal U_{\mathrm{mort}}
++
+\mathcal U_{\mathrm{param}}
++
+\mathcal U_{\mathrm{NN}}
++
+\mathcal U_{\mathrm{spec}},
+\label{eq:uncertainty-components}
+\end{equation}
+where the terms correspond respectively to Monte Carlo error, mortality process uncertainty, parameter estimation uncertainty, neural network uncertainty and model specification uncertainty. The proposed PhD asks how these components can be quantified, calibrated and propagated into actuarial decision quantities.
+
+\section{Research Aim, Objectives and Questions}
+\subsection{Aim}
+The main aim is to develop and evaluate a deep neural network emulation framework with statistically rigorous uncertainty quantification for variable annuity guarantee valuation under stochastic mortality.
+
+\subsection{Objectives}
+\begin{enumerate}[label=\arabic*.]
+\item Formulate a stochastic actuarial model for VA guarantees in which financial and mortality risks evolve dynamically.
+\item Construct a high fidelity Monte Carlo or least squares Monte Carlo benchmark valuation engine.
+\item Develop deep neural network emulators for policy level and portfolio level liability valuation.
+\item Quantify uncertainty using heteroscedastic likelihoods, ensembles, bootstrap methods, Monte Carlo dropout and conformal prediction.
+\item Separate Monte Carlo noise, mortality model uncertainty, parameter uncertainty and surrogate model uncertainty where possible.
+\item Evaluate calibration, coverage, sharpness, tail reliability and robustness under distribution shift.
+\item Assess the propagation of emulator uncertainty into reserves, hedge sensitivities, value at risk and conditional tail expectation.
+\item Establish numerical convergence results or finite sample error decompositions for the proposed estimator under suitable assumptions.
+\end{enumerate}
+
+\subsection{Research questions}
+\begin{enumerate}[label=RQ\arabic*.]
+\item How accurately can deep neural networks emulate VA guarantee values when mortality is stochastic?
+\item How large is the computational saving relative to full Monte Carlo or nested simulation?
+\item Which uncertainty quantification methods provide the best calibrated predictive distributions for VA liabilities?
+\item How should total valuation uncertainty be decomposed into stochastic, parametric and approximation components?
+\item How sensitive are prices and predictive intervals to the choice of stochastic mortality model?
+\item Do the resulting intervals remain reliable for stressed market conditions, high moneyness and tail liability states?
+\item Can emulator uncertainty be propagated reliably to actuarial capital and hedging quantities?
+\end{enumerate}
+
+\section{Actuarial and Mathematical Literature Context}
+Variable annuity guaranteed benefits resemble exotic options but remain life contingent insurance liabilities. For example, a GMAB may be viewed as a put style payoff contingent on survival, while GMDB cash flows are triggered by death. This distinction means that financial and mortality risk must be handled jointly. Feng and Yi formulate stochastic reserving and hedging for VA guarantees using explicit survival contingent liabilities and actuarial tail risk measures such as VaR and CTE. More recent research extends VA models to stochastic volatility, stochastic interest rates and non Markovian mortality.
+
+A particularly relevant development is the use of Volterra mortality models jointly with rough Heston financial dynamics. In such models the force of mortality may exhibit long range dependence and the volatility process may be non Markovian. This destroys the low dimensional Markov structure required by standard dynamic programming, motivating path based regression methods and neural approximators. Recent work also shows that the pricing error in deep signature LSMC can be decomposed into Monte Carlo sampling, time discretisation, signature truncation and neural network approximation components. This decomposition motivates the present proposal's broader statistical uncertainty analysis.
+
+For dynamic withdrawals, the VA valuation problem is naturally formulated as stochastic control. Let $X_n$ be the state immediately before the policyholder decision at time $t_n$, and let $\pi_n$ denote the withdrawal or control. Then a controlled transition may be written as
+\begin{equation}
+X_{n+1}=\mathcal T_n(X_n,\pi_n,Z_{n+1}),
+\end{equation}
+with $Z_{n+1}$ the exogenous disturbance. The optimal value satisfies a Bellman recursion and the conditional continuation value can be estimated using least squares Monte Carlo, with the regression function replaced by a neural network in high dimensions.
+
+\section{Mathematical Framework}
+\subsection{Filtered probability space}
+Let
+\[
+(\Omega,\mathcal F,\mathbb F,\Pp),
+\qquad
+\mathbb F=(\mathcal F_t)_{0\le t\le T},
+\]
+be a filtered probability space satisfying the usual conditions. The filtration is assumed to contain the information generated by financial market factors and mortality factors. Let $\Q$ denote a risk neutral pricing measure for hedgeable financial risk. Since mortality risk is generally not fully traded, the pricing measure may be taken as a product of the financial risk neutral measure with a chosen actuarial mortality measure under independence, or more generally as a pricing functional determined by a mortality risk premium.
+
+\subsection{Financial market model}
+A baseline account model under $\Q$ is
+\begin{align}
+\dd S_t &= r_tS_t\dd t+\sigma_tS_t\dd W_t^{S},\label{eq:asset}\\
+\dd A_t &= A_t\bigl[(r_t-\alpha)\dd t+\sigma_t\dd W_t^{S}\bigr]-\dd C_t,
+\label{eq:account}
+\end{align}
+where $S_t$ is the reference fund, $A_t$ the VA account value, $r_t$ the short rate, $\alpha$ the total fee rate, and $C_t$ cumulative withdrawals.
+
+For stochastic volatility one may adopt a Heston model
+\begin{align}
+\dd S_t &= r_tS_t\dd t + S_t\sqrt{V_t}\dd W_t^S,\label{eq:heston1}\\
+\dd V_t &= \kappa_V(\theta_V-V_t)\dd t+\xi\sqrt{V_t}\dd W_t^V,\label{eq:heston2}\\
+\dd\langle W^S,W^V\rangle_t&=\rho\dd t.
+\end{align}
+A rough Heston extension replaces the Markovian variance equation by the Volterra form
+\begin{equation}
+V_t
+=V_0+\int_0^t K_V(t-s)
+\left[\kappa_V(\theta_V-V_s)\dd s+\xi\sqrt{V_s}\dd W_s^V\right],
+\label{eq:rough-heston}
+\end{equation}
+with fractional kernel
+\begin{equation}
+K_V(u)=\frac{u^{H_V-1/2}}{\Gamma(H_V+1/2)},
+\qquad H_V\in(0,1/2).
+\end{equation}
+The fee deducted account can then be represented as
+\begin{equation}
+A_t=S_t\exp(-\alpha t)
+\label{eq:fee-account}
+\end{equation}
+in the no withdrawal case.
+
+\subsection{Stochastic interest rates}
+Where stochastic rates are required, a Cox, Ingersoll and Ross specification may be used:
+\begin{equation}
+\dd r_t=\kappa_r(\theta_r-r_t)\dd t+\sigma_r\sqrt{r_t}\dd W_t^r,
+\end{equation}
+with the Feller condition $2\kappa_r\theta_r\ge\sigma_r^2$ imposed where positivity is required. The stochastic discount factor is
+\begin{equation}
+D(t,u)=\exp\left(-\int_t^u r_s\dd s\right).
+\label{eq:discount-factor}
+\end{equation}
+
+\subsection{Mortality intensity and survival probability}
+Let $\tau_x$ denote the future lifetime of a policyholder aged $x$ at issue and let $\mu_{x+t}$ denote the stochastic force of mortality. Conditional on the mortality filtration $\mathcal G_t$, survival from $t$ to $u$ is
+\begin{equation}
+{}_{u-t}p_{x+t}
+=\Pp(\tau_x>u\mid\mathcal G_t)
+=\E\left[
+\exp\left(-\int_t^u\mu_{x+s}\dd s\right)
+\Bigm|\mathcal G_t
+\right].
+\label{eq:survival}
+\end{equation}
+A tractable baseline diffusion is
+\begin{equation}
+\dd \mu_t=\kappa_\mu(\theta_\mu-\mu_t)\dd t+\sigma_\mu g(\mu_t)\dd W_t^\mu,
+\label{eq:mortality-diffusion}
+\end{equation}
+where $g$ is selected to preserve admissibility or positivity.
+
+A more advanced specification, motivated by recent actuarial work on long range dependence, is the Volterra mortality model
+\begin{equation}
+\mu_{x+t}
+=\mu_x+
+\int_0^t K_\mu(t-u)b(\mu_{x+u})\dd u
++
+\int_0^t K_\mu(t-u)\sigma(\mu_{x+u})\dd B_u,
+\label{eq:volterra-mortality-general}
+\end{equation}
+with fractional kernel
+\begin{equation}
+K_\mu(u)=\frac{u^{H_\mu-1/2}}{\Gamma(H_\mu+1/2)}.
+\label{eq:mortality-kernel}
+\end{equation}
+A one factor affine specification is
+\begin{equation}
+\mu_{x+t}
+=
+\mu_x
++
+\lambda_\mu\int_0^tK_\mu(t-u)\mu_{x+u}\dd u
++
+\sigma_\mu\int_0^tK_\mu(t-u)\sqrt{\mu_{x+u}}\dd B_u.
+\label{eq:volterra-mortality}
+\end{equation}
+When $H_\mu>1/2$, the kernel can induce long range dependence, while $H_\mu=1/2$ recovers a Markovian limit.
+
+For discrete numerical paths on a grid $0=t_0<\cdots<t_N$, survival along a simulated mortality path can be approximated by the trapezoidal rule,
+\begin{equation}
+{}_{t_n}p_x^{(m)}
+\approx
+\exp\left
+\{-\frac{\Delta t}{2}
+\sum_{k=0}^{n-1}
+\left(\mu_{x+t_k}^{(m)}+\mu_{x+t_{k+1}}^{(m)}\right)
+\right\}.
+\label{eq:survival-discrete}
+\end{equation}
+
+\subsection{Mortality calibration}
+If observed cohort survival proportions are $\ell_{x+s}/\ell_x$, mortality parameters $\vartheta_\mu$ may be estimated by nonlinear least squares,
+\begin{equation}
+\widehat\vartheta_\mu
+=
+\argmin_{\vartheta_\mu\in\Theta_\mu}
+\frac1N\sum_{s=1}^{N}
+\left[
+{}_sp_x(\vartheta_\mu)-\frac{\ell_{x+s}}{\ell_x}
+\right]^2.
+\label{eq:mortality-calibration}
+\end{equation}
+Parameter uncertainty may then be studied by nonparametric bootstrap, parametric bootstrap or Bayesian posterior sampling.
+
+\subsection{Guaranteed benefits}
+For a maturity guarantee $G_T$, the insurer's gross GMMB liability is
+\begin{equation}
+L_T^{\mathrm{GMMB}}
+=
+\ind_{\{\tau_x>T\}}
+D(0,T)(G_T-A_T)^+.
+\label{eq:gmmb}
+\end{equation}
+For a death benefit $G_t^D$, the GMDB liability can be represented as
+\begin{equation}
+L^{\mathrm{GMDB}}
+=
+\ind_{\{\tau_x\le T\}}
+D(0,\tau_x)(G_{\tau_x}^D-A_{\tau_x})^+.
+\label{eq:gmdb}
+\end{equation}
+A combined guarantee may therefore be written
+\begin{equation}
+H
+=
+\ind_{\{\tau_x>T\}}D(0,T)(G_T-A_T)^+
++
+\ind_{\{\tau_x\le T\}}D(0,\tau_x)(G_{\tau_x}^D-A_{\tau_x})^+.
+\label{eq:combined-payoff}
+\end{equation}
+
+If fees at rate $\alpha_g$ are collected to fund the guarantee, the discounted fee income is
+\begin{equation}
+I
+=
+\alpha_g\int_0^{T\wedge\tau_x}D(0,t)A_t\dd t,
+\end{equation}
+and the net liability is
+\begin{equation}
+L=H-I.
+\label{eq:net-liability}
+\end{equation}
+The distinction between gross and net liability is actuarially important because adverse markets may simultaneously increase guarantee costs and reduce fee income.
+
+\subsection{Market consistent valuation}
+The fair value of the guarantee is
+\begin{equation}
+V_0=\E^{\Q}[L\mid\mathcal F_0].
+\label{eq:fair-value}
+\end{equation}
+For a fee parameter $c$, the fair fee $c^*$ is defined implicitly by
+\begin{equation}
+U_0(c^*)=A_0,
+\label{eq:fair-fee}
+\end{equation}
+where $U_0(c)$ is the value of the full contract under fee level $c$. If $U_0(c)$ is monotone decreasing, $c^*$ can be obtained by bisection.
+
+\section{Optimal Stopping and Stochastic Control Extension}
+Many VA contracts allow surrender or dynamic withdrawals. Let the decision grid be
+\[
+0=t_0<t_1<\cdots<t_N=T,
+\]
+and let $X_n$ denote the full state vector before the decision at $t_n$. For a withdrawal $\pi_n\in\mathcal A_n(X_n)$,
+\begin{equation}
+X_{n+1}=\mathcal T_n(X_n,\pi_n,Z_{n+1}).
+\label{eq:controlled-transition}
+\end{equation}
+Let $R_n(X_n,\pi_n)$ denote the immediate policyholder cash flow and $\beta_{n,n+1}=D(t_n,t_{n+1})$. The optimal value function satisfies
+\begin{equation}
+V_n(x)=
+\sup_{\pi\in\mathcal A_n(x)}
+\left\{
+R_n(x,\pi)
++
+\E^{\Q}\left[
+\beta_{n,n+1}V_{n+1}(X_{n+1})
+\mid X_n=x,\pi_n=\pi
+\right]
+\right\},
+\label{eq:bellman}
+\end{equation}
+with terminal condition
+\begin{equation}
+V_N(x)=R_N(x).
+\end{equation}
+Define the continuation function
+\begin{equation}
+\Phi_n(x,\pi)
+=
+\E^{\Q}\left[
+\beta_{n,n+1}V_{n+1}(X_{n+1})
+\mid X_n=x,\pi_n=\pi
+\right].
+\label{eq:continuation}
+\end{equation}
+Least squares Monte Carlo approximates \eqref{eq:continuation} by regression,
+\begin{equation}
+\beta_{n,n+1}V_{n+1}(X_{n+1}^{(m)})
+=f_{\theta_n}(X_n^{(m)},\pi_n^{(m)})+\varepsilon_n^{(m)}.
+\label{eq:lsmc-regression}
+\end{equation}
+A neural network is attractive because $f_{\theta_n}$ may be highly nonlinear and high dimensional.
+
+For pure surrender, with immediate surrender payoff $g_n(X_n)$, the recursion simplifies to
+\begin{equation}
+V_n(X_n)=\max\left\{g_n(X_n),\Phi_n(X_n)\right\}.
+\label{eq:optimal-stopping}
+\end{equation}
+The optimal stopping time is
+\begin{equation}
+\tau^*=\inf\{t_n: g_n(X_n)\ge \Phi_n(X_n)\}.
+\label{eq:stopping-time}
+\end{equation}
+
+\section{Monte Carlo Valuation and Statistical Error}
+\subsection{Monte Carlo estimator}
+For each policy state $x$, suppose the discounted liability is $H(x,\omega)$. The benchmark estimator is
+\begin{equation}
+\widehat V_M(x)=\frac1M\sum_{m=1}^{M}H(x,\omega_m).
+\end{equation}
+Conditional on $X=x$,
+\begin{equation}
+\E[\widehat V_M(x)\mid x]=V(x),
+\qquad
+\Var(\widehat V_M(x)\mid x)
+=\frac{\sigma_H^2(x)}{M},
+\label{eq:mc-var}
+\end{equation}
+where
+\begin{equation}
+\sigma_H^2(x)=\Var(H(x,\omega)\mid X=x).
+\end{equation}
+The empirical Monte Carlo standard error is
+\begin{equation}
+\widehat{\operatorname{SE}}_{\mathrm{MC}}(x)
+=
+\sqrt{
+\frac{1}{M(M-1)}
+\sum_{m=1}^{M}
+\left(H^{(m)}(x)-\widehat V_M(x)\right)^2
+}.
+\label{eq:mc-se}
+\end{equation}
+Thus the supervised response is naturally heteroscedastic across policy states.
+
+Under standard finite variance conditions,
+\begin{equation}
+\sqrt{M}\left(\widehat V_M(x)-V(x)\right)
+\xrightarrow{d}
+\mathcal N(0,\sigma_H^2(x)).
+\label{eq:mc-clt}
+\end{equation}
+This provides a first layer of asymptotic uncertainty quantification.
+
+\subsection{Nested simulation}
+For nested simulation, let $Z_i$ be an outer economic state and $Y_{ij}$ the inner liability draw. Then
+\begin{equation}
+\widehat V_{M,N}
+=
+\frac1N\sum_{i=1}^{N}
+\left(
+\frac1M\sum_{j=1}^{M}Y_{ij}
+\right).
+\end{equation}
+The total simulation error depends on both outer and inner sample sizes. The project will study optimal allocation under a fixed computational budget $B\approx NM$ and how emulation changes this budget trade off.
+
+\subsection{Variance reduction}
+Antithetic variates, control variates, common random numbers and quasi Monte Carlo will be considered. If $C$ is a control with known expectation, an adjusted estimator is
+\begin{equation}
+\widehat V_{\mathrm{CV}}
+=
+\widehat V_M
+-b\left(\overline C_M-\E[C]\right),
+\end{equation}
+with optimal coefficient
+\begin{equation}
+b^*=\frac{\Cov(H,C)}{\Var(C)}.
+\end{equation}
+
+\section{Deep Neural Network Emulator}
+Let $x\in\R^p$ denote the transformed policy and market state. A feedforward network with $L$ hidden layers is
+\begin{align}
+h^{(0)}&=x,\\
+h^{(\ell)}&=\phi_\ell\left(W^{(\ell)}h^{(\ell-1)}+b^{(\ell)}\right),
+\qquad \ell=1,\ldots,L,\\
+f_\theta(x)&=W^{(L+1)}h^{(L)}+b^{(L+1)}.
+\end{align}
+The standard empirical risk estimator is
+\begin{equation}
+\widehat\theta
+=
+\argmin_{\theta}
+\frac1n\sum_{i=1}^{n}
+w_i\left(\widehat V_{M_i}(x_i)-f_\theta(x_i)\right)^2
++\lambda\mathcal R(\theta),
+\label{eq:nn-loss}
+\end{equation}
+where $w_i$ may give additional weight to tail liabilities, and $\mathcal R$ is a regularisation penalty.
+
+If Monte Carlo standard errors are available, a statistically efficient weighting choice is
+\begin{equation}
+w_i\propto \widehat{\operatorname{SE}}_{\mathrm{MC}}(x_i)^{-2},
+\end{equation}
+provided excessively small estimated standard errors are stabilised.
+
+\subsection{Approximation and estimation error}
+Let $f^*(x)=V(x)$. A useful conceptual decomposition is
+\begin{align}
+\widehat f(x)-f^*(x)
+&=
+\underbrace{\left(\widehat f(x)-f_{\mathcal F}^*(x)\right)}_{\text{estimation or optimisation}}
++
+\underbrace{\left(f_{\mathcal F}^*(x)-f^*(x)\right)}_{\text{approximation}},
+\label{eq:nn-error-decomp}
+\end{align}
+where
+\begin{equation}
+f_{\mathcal F}^*=\argmin_{f\in\mathcal F}\E[(V(X)-f(X))^2].
+\end{equation}
+The observed response additionally contains Monte Carlo noise,
+\begin{equation}
+\widehat V_M(x)=V(x)+\varepsilon_{\mathrm{MC}}(x),
+\qquad
+\E[\varepsilon_{\mathrm{MC}}(x)\mid x]=0.
+\end{equation}
+
+\section{Uncertainty Quantification}
+\subsection{Aleatoric and epistemic uncertainty}
+For predictive parameter $\Theta$ and training data $\mathcal D$, the law of total variance gives
+\begin{equation}
+\Var(Y^*\mid x,\mathcal D)
+=
+\E_{\Theta\mid\mathcal D}
+\left[
+\Var(Y^*\mid x,\Theta)
+\right]
++
+\Var_{\Theta\mid\mathcal D}
+\left[
+\E(Y^*\mid x,\Theta)
+\right].
+\label{eq:total-variance}
+\end{equation}
+The first term is interpreted as conditional or aleatoric uncertainty and the second as epistemic model uncertainty. In the present problem, the first term will be refined to separate intrinsic path variation from finite Monte Carlo target noise.
+
+\subsection{Heteroscedastic probabilistic network}
+A Gaussian working model is
+\begin{equation}
+Y_i\mid X_i=x_i
+\sim
+\mathcal N\left(\mu_\theta(x_i),\sigma_\theta^2(x_i)\right).
+\end{equation}
+The negative log likelihood is
+\begin{equation}
+\mathcal L_{\mathrm{NLL}}(\theta)
+=
+\frac1n\sum_{i=1}^{n}
+\left[
+\frac{(y_i-\mu_\theta(x_i))^2}{2\sigma_\theta^2(x_i)}
++\frac12\log\sigma_\theta^2(x_i)
+\right].
+\label{eq:hetero-nll}
+\end{equation}
+To ensure positivity, the scale output can be parameterised as
+\begin{equation}
+\sigma_\theta(x)=\log(1+\exp(s_\theta(x)))+\epsilon.
+\end{equation}
+Student $t$ likelihoods will be considered if residuals are heavy tailed.
+
+\subsection{Deep ensembles}
+Train $K$ independently initialised networks. If network $k$ produces mean $\mu_k(x)$ and variance $\sigma_k^2(x)$, then
+\begin{equation}
+\overline\mu(x)=\frac1K\sum_{k=1}^{K}\mu_k(x),
+\end{equation}
+and the total predictive variance estimate is
+\begin{equation}
+\widehat\sigma_{\mathrm{ens}}^2(x)
+=
+\frac1K\sum_{k=1}^{K}\sigma_k^2(x)
++
+\frac1K\sum_{k=1}^{K}\mu_k^2(x)
+-
+\overline\mu^2(x).
+\label{eq:ensemble-var}
+\end{equation}
+
+\subsection{Monte Carlo dropout}
+With dropout retained at inference, perform $B$ stochastic forward passes $f_{\theta,b}(x)$. Then
+\begin{equation}
+\widehat\mu_{\mathrm{MCdrop}}(x)
+=
+\frac1B\sum_{b=1}^{B}f_{\theta,b}(x),
+\end{equation}
+with predictive variance estimated from the empirical dispersion of the forward passes, optionally augmented by observation noise variance.
+
+\subsection{Bootstrap neural networks}
+For bootstrap datasets $\mathcal D^{*(1)},\ldots,\mathcal D^{*(B)}$, fit $f_{\widehat\theta^{*(b)}}$. A percentile interval for $V(x)$ is
+\begin{equation}
+\left[
+q_{\alpha/2}\{f_{\widehat\theta^{*(b)}}(x)\},
+q_{1-\alpha/2}\{f_{\widehat\theta^{*(b)}}(x)\}
+\right].
+\end{equation}
+A two level bootstrap will additionally resample mortality parameters or mortality data before regenerating valuation targets.
+
+\subsection{Conformal prediction}
+For split conformal regression, fit $\widehat f$ on a training sample and define calibration residuals
+\begin{equation}
+r_i=|y_i-\widehat f(x_i)|,
+\qquad i\in\mathcal I_{\mathrm{cal}}.
+\end{equation}
+Let $\widehat q_{1-\alpha}$ denote the appropriate empirical quantile. Then
+\begin{equation}
+C_{1-\alpha}(x)
+=
+\left[
+\widehat f(x)-\widehat q_{1-\alpha},
+\widehat f(x)+\widehat q_{1-\alpha}
+\right]
+\label{eq:conformal-simple}
+\end{equation}
+has finite sample marginal coverage under exchangeability.
+
+For conformalized quantile regression, first estimate lower and upper conditional quantiles
+\begin{equation}
+\widehat q_{\alpha/2}(x),
+\qquad
+\widehat q_{1-\alpha/2}(x),
+\end{equation}
+and calibrate with scores
+\begin{equation}
+R_i
+=
+\max\left\{
+\widehat q_{\alpha/2}(x_i)-y_i,
+\ y_i-\widehat q_{1-\alpha/2}(x_i)
+\right\}.
+\end{equation}
+The calibrated interval becomes
+\begin{equation}
+\left[
+\widehat q_{\alpha/2}(x)-\widehat Q,
+\widehat q_{1-\alpha/2}(x)+\widehat Q
+\right].
+\label{eq:cqr}
+\end{equation}
+
+\section{Error Decomposition and Convergence Targets}
+A central theoretical objective will be to derive an error decomposition of the form
+\begin{equation}
+|\widehat V_{\mathrm{final}}(x)-V(x)|
+\le
+E_{\mathrm{MC}}(x)
++E_{\mathrm{time}}(x)
++E_{\mathrm{mort}}(x)
++E_{\mathrm{approx}}(x)
++E_{\mathrm{est}}(x)
++E_{\mathrm{opt}}(x),
+\label{eq:master-error}
+\end{equation}
+where the components respectively denote Monte Carlo sampling error, time discretisation, mortality discretisation or calibration error, neural network approximation error, statistical estimation error and numerical optimisation error.
+
+For a path dependent extension based on truncated signatures, an additional term enters,
+\begin{equation}
+E_{\mathrm{sig}}(K),
+\end{equation}
+where $K$ is the truncation level. The target result would establish conditions under which
+\begin{equation}
+E_{\mathrm{MC}}
++E_{\mathrm{time}}
++E_{\mathrm{sig}}
++E_{\mathrm{approx}}
++E_{\mathrm{est}}
+\longrightarrow 0
+\end{equation}
+as simulation size, time resolution, signature depth and network capacity increase in a controlled sequence.
+
+A possible asymptotic statement for the emulator is consistency in $L^2(P_X)$,
+\begin{equation}
+\int
+\left|
+\widehat f_n(x)-V(x)
+\right|^2\dd P_X(x)
+\xrightarrow{P}0,
+\label{eq:l2-consistency}
+\end{equation}
+under assumptions on compactness or tail control of $X$, universal approximation of the network class, vanishing optimisation error and increasing effective simulation accuracy.
+
+\section{Actuarial Risk Measures and Capital}
+Let $L$ denote the one year or runoff net liability distribution. For confidence level $\alpha\in(0,1)$,
+\begin{equation}
+\VaR_\alpha(L)
+=
+\inf\{\ell\in\R:\Pp(L\le \ell)\ge \alpha\}.
+\label{eq:var}
+\end{equation}
+For continuous distributions,
+\begin{equation}
+\CTE_\alpha(L)
+=
+\E[L\mid L>\VaR_\alpha(L)].
+\label{eq:cte}
+\end{equation}
+The effect of emulator uncertainty on these quantities will be studied by comparing
+\begin{equation}
+\VaR_\alpha(L)
+\quad\text{versus}\quad
+\VaR_\alpha(\widehat L_{\mathrm{NN}}),
+\end{equation}
+and similarly for CTE. The error
+\begin{equation}
+\Delta_{\mathrm{VaR}}
+=
+\VaR_\alpha(\widehat L_{\mathrm{NN}})
+-
+\VaR_\alpha(L)
+\end{equation}
+will be analysed across simulation replicates and model stresses.
+
+\section{Hedging Sensitivities}
+For a differentiable emulator, automatic differentiation permits estimates of valuation sensitivities. If $S$ is the underlying equity state,
+\begin{equation}
+\Delta_{\mathrm{NN}}
+=
+\frac{\partial f_\theta(x)}{\partial S},
+\qquad
+\Gamma_{\mathrm{NN}}
+=
+\frac{\partial^2 f_\theta(x)}{\partial S^2}.
+\end{equation}
+Similarly,
+\begin{equation}
+\nu_{\mathrm{NN}}
+=
+\frac{\partial f_\theta(x)}{\partial \sigma},
+\qquad
+\rho_{\mathrm{NN}}
+=
+\frac{\partial f_\theta(x)}{\partial r}.
+\end{equation}
+A mortality sensitivity can be defined by
+\begin{equation}
+\mathcal M_{\mathrm{NN}}
+=
+\frac{\partial f_\theta(x)}{\partial \mu},
+\end{equation}
+or with respect to mortality model parameters. These derivatives will be compared with finite difference Monte Carlo estimators using common random numbers.
+
+\section{Experimental Design}
+Let the state vector be
+\begin{equation}
+X=
+\left(
+A_0,
+G_0,
+x,
+T,
+\alpha,
+r_0,
+V_0,
+\mu_x,
+\vartheta_{\mu},
+\vartheta_{\mathrm{mkt}}
+\right).
+\end{equation}
+Training design points will be sampled using Latin hypercube or space filling designs. The design density will be augmented near important regions such as
+\begin{equation}
+\frac{G_0}{A_0}\approx 1,
+\end{equation}
+where the guarantee moves between in the money and out of the money states, and in stressed regions characterised by low account values, high volatility or adverse mortality assumptions.
+
+The simulation dataset will contain
+\begin{equation}
+\mathcal D
+=
+\left\{
+\left(x_i,\widehat V_{M_i}(x_i),\widehat{\operatorname{SE}}_{\mathrm{MC}}(x_i)\right)
+\right\}_{i=1}^{n}.
+\end{equation}
+Replicated valuations at a subset of states will permit direct validation of the estimated target noise model.
+
+\section{Model Evaluation}
+\subsection{Point prediction metrics}
+\begin{align}
+\mathrm{MAE}
+&=
+\frac1n\sum_{i=1}^{n}|y_i-\widehat y_i|,\\
+\mathrm{RMSE}
+&=
+\sqrt{\frac1n\sum_{i=1}^{n}(y_i-\widehat y_i)^2},\\
+\mathrm{MAPE}
+&=
+\frac{100}{n}
+\sum_{i=1}^{n}
+\left|\frac{y_i-\widehat y_i}{y_i}\right|,
+\end{align}
+with MAPE used only when denominators are suitably bounded away from zero.
+
+\subsection{Interval calibration}
+For predictive intervals $[L_i,U_i]$, empirical coverage is
+\begin{equation}
+\widehat{\mathrm{Cov}}_{1-\alpha}
+=
+\frac1n\sum_{i=1}^{n}
+\ind\{L_i\le y_i\le U_i\}.
+\end{equation}
+Sharpness is summarised by
+\begin{equation}
+\mathrm{Width}
+=
+\frac1n\sum_{i=1}^{n}(U_i-L_i).
+\end{equation}
+Conditional coverage will be evaluated across strata of age, guarantee moneyness, volatility, mortality intensity and liability quantile.
+
+\subsection{Proper scoring rules}
+For Gaussian predictive distribution $F_i=\mathcal N(\mu_i,\sigma_i^2)$, the negative log score is
+\begin{equation}
+\mathrm{NLL}_i
+=
+\frac12\log(2\pi\sigma_i^2)
++
+\frac{(y_i-\mu_i)^2}{2\sigma_i^2}.
+\end{equation}
+The continuous ranked probability score is
+\begin{equation}
+\mathrm{CRPS}(F,y)
+=
+\int_{-\infty}^{\infty}
+\left(F(z)-\ind\{y\le z\}\right)^2\dd z.
+\end{equation}
+These scores jointly reward calibration and sharpness.
+
+\section{Distribution Shift and Stress Testing}
+The emulator will be tested under states not represented centrally in training. Let $P_{\mathrm{train}}$ and $P_{\mathrm{stress}}$ denote the training and stress distributions. Performance degradation is
+\begin{equation}
+\Delta_{\mathrm{shift}}
+=
+\mathcal R_{P_{\mathrm{stress}}}(\widehat f)
+-
+\mathcal R_{P_{\mathrm{train}}}(\widehat f).
+\end{equation}
+Stress dimensions will include equity drawdowns, volatility shocks, interest rate shifts, longevity improvements, higher mortality volatility and extreme guarantee moneyness.
+
+A practical uncertainty based fallback rule can be defined as
+\begin{equation}
+\text{use full simulation if}
+\quad
+\widehat\sigma_{\mathrm{pred}}(x)>c_{\mathrm{UQ}}
+\quad\text{or}\quad
+d(x,\mathcal X_{\mathrm{train}})>c_d,
+\end{equation}
+where $d$ is an out of distribution distance measure. This leads to a hybrid actuarial architecture in which the emulator prices ordinary states and the original stochastic engine is retained for uncertain states.
+
+\section{Methodology and Work Packages}
+\subsection{Work Package 1: benchmark stochastic valuation}
+The first stage will specify the VA rider, financial dynamics and mortality dynamics. The baseline contract will be a GMMB and GMDB combination because the mathematics of survival contingent benefits is transparent while still retaining both financial and biometric risk. An extension to GMWB or surrender will introduce stochastic control.
+
+The valuation engine will be validated against special cases for which analytic or semi analytic benchmarks are available. Monte Carlo convergence will be assessed with increasing path counts and variance reduction methods.
+
+\subsection{Work Package 2: mortality calibration and uncertainty}
+At least two mortality specifications will be studied: a Markovian intensity model and a non Markovian Volterra model. Parameter estimates $\widehat\vartheta_\mu$ will be obtained from public mortality data. Bootstrap samples
+\begin{equation}
+\widehat\vartheta_\mu^{*(1)},\ldots,\widehat\vartheta_\mu^{*(B)}
+\end{equation}
+will generate a distribution of valuations
+\begin{equation}
+\widehat V^{*(b)}(x)
+=
+V(x;\widehat\vartheta_\mu^{*(b)}),
+\end{equation}
+which quantifies mortality parameter uncertainty.
+
+\subsection{Work Package 3: neural emulator}
+The emulator will be trained on simulated policy states. Candidate architectures include multilayer perceptrons with ReLU, GELU, CELU or $\tanh$ activations, residual connections, and monotonicity or positivity constraints where actuarially justified.
+
+\subsection{Work Package 4: uncertainty quantification}
+The methods in the previous section will be compared under common train and test designs. The primary target is not merely nominal coverage but conditional reliability in actuarially important regions.
+
+\subsection{Work Package 5: optimal control extension}
+If the core GMMB and GMDB framework is completed successfully, the project will extend to surrender or GMWB. Neural network LSMC will be used to approximate continuation values, and uncertainty in the estimated exercise or withdrawal boundary will be studied.
+
+\section{Expected Mathematical Contributions}
+The proposal is intended to yield more than an applied comparison of machine learning methods. Candidate mathematical and statistical contributions include:
+\begin{enumerate}[label=\arabic*.]
+\item A formal stochastic representation of VA net liability under joint financial and stochastic mortality risk.
+\item A decomposition of total valuation error into simulation, mortality, numerical discretisation, approximation and estimation components.
+\item Consistency or convergence conditions for the emulator trained on noisy Monte Carlo targets.
+\item Calibration results for conformal or probabilistic prediction intervals under heteroscedastic actuarial simulation noise.
+\item A theoretically justified allocation of computational budget between design points and inner Monte Carlo paths.
+\item Stability results for emulator derived hedge sensitivities.
+\item A path dependent extension in which neural regression is combined with signatures or another functional representation for non Markovian mortality and volatility.
+\end{enumerate}
+
+\section{Expected Actuarial Contributions}
+The actuarial contributions are expected to include:
+\begin{enumerate}[label=\arabic*.]
+\item faster policy level and portfolio level valuation;
+\item explicit uncertainty intervals around reserve or liability estimates;
+\item quantified mortality model risk;
+\item improved diagnostics for tail liabilities;
+\item uncertainty aware VaR and CTE calculations;
+\item more stable and computationally efficient hedge sensitivities;
+\item a practical rule for when a surrogate model should defer to full stochastic simulation.
+\end{enumerate}
+
+\section{Validation and Robustness}
+Validation will proceed at four levels. First, the benchmark stochastic engine will be checked numerically. Second, point predictions will be compared with unseen high fidelity Monte Carlo values. Third, predictive intervals will be evaluated for empirical and conditional coverage. Fourth, all methods will be stress tested under model and distribution shift.
+
+Where possible, the study will use paired random numbers so that differences between valuation methods have lower Monte Carlo variance. Bootstrap confidence intervals for comparative metrics will be reported. Particular attention will be paid to tail strata because overall RMSE can conceal poor performance where insurer losses are largest.
+
+\section{Ethical Considerations and Reproducibility}
+The project can be completed using synthetic policy portfolios and public mortality data, avoiding identifiable policyholder information. If proprietary data are later introduced, the study will follow institutional ethics and data governance requirements.
+
+All simulation designs, parameter configurations and random number seeds will be version controlled. Subject to licensing constraints, code and synthetic benchmark data will be released to support reproducibility.
+
+\section{Proposed Three Year Timeline}
+\begin{longtable}{p{0.16\textwidth}p{0.56\textwidth}p{0.20\textwidth}}
+\toprule
+\textbf{Period} & \textbf{Main activities} & \textbf{Milestone}\\
+\midrule
+Months 1 to 6 & Literature review; formal VA contract specification; probability space setup; stochastic mortality calibration; benchmark model design. & Confirmed mathematical framework.\\
+Months 7 to 12 & Monte Carlo valuation engine; variance reduction; convergence analysis; synthetic portfolio generation. & Validated benchmark engine.\\
+Months 13 to 18 & Deterministic neural emulators; baseline regression comparisons; experimental design study. & First empirical chapter or paper.\\
+Months 19 to 24 & Deep ensembles, heteroscedastic networks, dropout, bootstrap and conformal calibration. & Core UQ chapter or paper.\\
+Months 25 to 30 & Mortality model uncertainty; tail stress testing; hedge sensitivities; VaR and CTE propagation; possible LSMC extension. & Second or third paper.\\
+Months 31 to 36 & Integrate theoretical and empirical results; final robustness work; thesis writing and submission. & PhD thesis submission.\\
+\bottomrule
+\end{longtable}
+
+\section{Proposed Thesis Structure}
+\begin{enumerate}[label=\textbf{Chapter \arabic*:}]
+\item Introduction, actuarial motivation and research questions.
+\item Mathematical framework for variable annuities and stochastic mortality.
+\item High fidelity Monte Carlo valuation and statistical error analysis.
+\item Deep neural network emulation of VA liabilities.
+\item Uncertainty quantification and conformal calibration.
+\item Mortality model uncertainty, stress testing and tail reliability.
+\item Optimal control, surrender or GMWB extension using neural LSMC.
+\item Portfolio aggregation, capital, hedging and actuarial implications.
+\item Conclusions and future research.
+\end{enumerate}
+
+\section{Conclusion}
+This PhD will investigate a mathematically rich actuarial problem in which financial uncertainty, mortality risk, simulation error and neural network approximation interact. The key contribution is not merely to replace Monte Carlo valuation with a neural network, but to develop an emulator whose uncertainty is measurable, calibrated and usable in actuarial risk management. The proposed mathematical framework incorporates stochastic mortality intensities, market consistent pricing, survival contingent benefits, Monte Carlo limit theory, stochastic control, nonlinear function approximation, predictive uncertainty and actuarial tail measures. This places the research firmly within mathematical statistics and actuarial mathematics while retaining strong computational relevance.
+
+\begin{thebibliography}{99}
+
+\bibitem[Ballotta and Haberman(2006)]{ballotta2006}
+Ballotta, L. and Haberman, S. (2006).
+The fair valuation problem of guaranteed annuity options: The stochastic mortality environment case.
+\emph{Insurance: Mathematics and Economics}, 38(1), 195 to 214.
+
+\bibitem[Cairns et al.(2006)]{cairns2006}
+Cairns, A. J. G., Blake, D. and Dowd, K. (2006).
+A two factor model for stochastic mortality with parameter uncertainty: Theory and calibration.
+\emph{Journal of Risk and Insurance}, 73(4), 687 to 718.
+
+\bibitem[Feng and Yi(2019)]{fengyi2019}
+Feng, R. and Yi, B. (2019).
+Quantitative modeling of risk management strategies: Stochastic reserving and hedging of variable annuity guaranteed benefits.
+\emph{Insurance: Mathematics and Economics}, 85, 60 to 73.
+
+\bibitem[Gal and Ghahramani(2016)]{gal2016}
+Gal, Y. and Ghahramani, Z. (2016).
+Dropout as a Bayesian approximation: Representing model uncertainty in deep learning.
+\emph{Proceedings of the 33rd International Conference on Machine Learning}, 48, 1050 to 1059.
+
+\bibitem[Gan and Valdez(2018)]{gan2018}
+Gan, G. and Valdez, E. A. (2018).
+Nested stochastic valuation of large variable annuity portfolios: Monte Carlo simulation and synthetic datasets.
+\emph{Data}, 3(3), 31.
+
+\bibitem[Gneiting and Raftery(2007)]{gneiting2007}
+Gneiting, T. and Raftery, A. E. (2007).
+Strictly proper scoring rules, prediction, and estimation.
+\emph{Journal of the American Statistical Association}, 102(477), 359 to 378.
+
+\bibitem[Lakshminarayanan et al.(2017)]{lakshminarayanan2017}
+Lakshminarayanan, B., Pritzel, A. and Blundell, C. (2017).
+Simple and scalable predictive uncertainty estimation using deep ensembles.
+\emph{Advances in Neural Information Processing Systems}, 30.
+
+\bibitem[Langren\'e et al.(2026)]{langrene2026}
+Langren\'e, N., Luo, X., Shevchenko, P. V. and Zhang, R. (2026).
+Deep Least Squares Monte Carlo methods for the valuation of variable annuities with guarantees.
+\emph{arXiv preprint arXiv:2605.27182}.
+
+\bibitem[Lee and Carter(1992)]{lee1992}
+Lee, R. D. and Carter, L. R. (1992).
+Modeling and forecasting U.S. mortality.
+\emph{Journal of the American Statistical Association}, 87(419), 659 to 671.
+
+\bibitem[Li and Lyu(2026)]{lilyu2026}
+Li, W. and Lyu, H. (2026).
+Valuation of variable annuities under the Volterra mortality and rough Heston models.
+\emph{arXiv preprint arXiv:2604.00472}.
+
+\bibitem[Longstaff and Schwartz(2001)]{longstaff2001}
+Longstaff, F. A. and Schwartz, E. S. (2001).
+Valuing American options by simulation: A simple least squares approach.
+\emph{Review of Financial Studies}, 14(1), 113 to 147.
+
+\bibitem[Luo and Shevchenko(2015)]{luo2015}
+Luo, X. and Shevchenko, P. V. (2015).
+Valuation of variable annuities with guaranteed minimum withdrawal and death benefits via stochastic control optimization.
+\emph{Insurance: Mathematics and Economics}, 62, 5 to 15.
+
+\bibitem[Romano et al.(2019)]{romano2019}
+Romano, Y., Patterson, E. and Cand\`es, E. J. (2019).
+Conformalized quantile regression.
+\emph{Advances in Neural Information Processing Systems}, 32.
+
+\bibitem[Wang et al.(2021)]{wang2021}
+Wang, L., Chiu, M. C. and Wong, H. Y. (2021).
+Volterra mortality model: Actuarial valuation and risk management with long range dependence.
+\emph{Insurance: Mathematics and Economics}, 96, 1 to 14.
+
+\end{thebibliography}
 
 \end{document}

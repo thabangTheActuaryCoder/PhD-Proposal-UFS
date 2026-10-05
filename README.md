@@ -49,15 +49,16 @@ prediction. The work is organised in three parts.
 ## Status
 
 Proposal under construction. Results marked **To be established** are targets with a stated proof
-route, not proved theorems. The typeset proposal is `Proposal/latex/proposal.tex` (BITM/UFS v4
-template format); the Markdown prose draft is `Proposal/PhD_Proposal.md` and the outline with page
-budgets is `Proposal/PhD_Proposal_Skeleton.md`.
+route, not proved theorems. The typeset proposal is `Proposal/latex/proposal.tex` (standalone,
+mathematics-first, with an inline bibliography); the Markdown prose draft is
+`Proposal/PhD_Proposal.md` and the outline with page budgets is
+`Proposal/PhD_Proposal_Skeleton.md`.
 
 **Build** (XeLaTeX; needs Arial for the cover):
 
 ```
 cd Proposal/cover  && xelatex cover.tex                 # build the one-page title page first
-cd ../latex        && xelatex proposal.tex && bibtex proposal && xelatex proposal.tex && xelatex proposal.tex
+cd ../latex        && xelatex proposal.tex && xelatex proposal.tex
 ```
 
 ## Model at a Glance
@@ -98,9 +99,8 @@ Y  ∈ [ L(x), U(x) ]  with coverage ≥ 1 − α              (calibrated predi
 ├── Proposal/
 │   ├── PhD_Proposal.md               # full prose draft (Markdown)
 │   ├── PhD_Proposal_Skeleton.md      # section-by-section outline (10-12 pg budget)
-│   ├── latex/                        # typeset proposal (BITM/UFS v4 format, XeLaTeX)
-│   │   ├── proposal.tex              #   main document (17-section structure + natbib)
-│   │   └── msc_body_style.sty        #   body style, UFS palette
+│   ├── latex/                        # typeset proposal (standalone, XeLaTeX)
+│   │   └── proposal.tex              #   main document (maths framework + inline bibliography)
 │   └── cover/                        # UFS title page (XeLaTeX)
 │       ├── cover.tex                 #   formal title page
 │       └── template_images/ufs_logo.png
