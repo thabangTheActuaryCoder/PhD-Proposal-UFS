@@ -90,7 +90,10 @@ Y  ∈ [ L(x), U(x) ]  with coverage ≥ 1 − α              (calibrated predi
 │   └── ufs_logo.png                  # University of the Free State crest
 ├── Proposal/
 │   ├── PhD_Proposal.md               # full prose draft
-│   └── PhD_Proposal_Skeleton.md      # section-by-section outline (10-12 pg budget)
+│   ├── PhD_Proposal_Skeleton.md      # section-by-section outline (10-12 pg budget)
+│   └── cover/                        # UFS title page (XeLaTeX)
+│       ├── cover.tex                 #   formal title page; compile: xelatex cover.tex
+│       └── template_images/ufs_logo.png
 ├── References/
 │   └── References.bib                # BibTeX (natbib author-year)
 └── Offer/                            # Admission correspondence (to be added)

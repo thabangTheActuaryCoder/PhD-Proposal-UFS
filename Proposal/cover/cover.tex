@@ -1,0 +1,66 @@
+% !TeX program = xelatex
+% Formal title page for the PhD research proposal.
+% Adapted from the UFS NAS proposal template (v4). Compile with XeLaTeX (needs Arial).
+\documentclass[12pt]{article}
+
+\usepackage{fontspec}
+\usepackage{graphicx}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{parskip}
+\usepackage{setspace}
+
+\setmainfont{Arial}
+\setlength{\parindent}{0pt}
+\onehalfspacing
+
+% === Variables (tuned for this proposal) ===
+\newcommand{\thesistitle}{Deep Neural Network Emulation and Uncertainty Quantification for Variable-Annuity Guarantee Valuation under Stochastic Mortality}
+\newcommand{\fullnames}{Thabang Bongani Junior Baloyi}
+\newcommand{\degree}{Doctor of Philosophy}
+\newcommand{\proposaltype}{(Mathematical Statistics)}
+\newcommand{\department}{Department of Mathematical Statistics \& Actuarial Science}
+\newcommand{\supervisor}{Dr J. Blomerous (FASSA)}
+\newcommand{\proposalmonth}{October}
+\newcommand{\proposalyear}{2026}
+
+\begin{document}
+
+	% === Formal title page ===
+	\begin{titlepage}
+		\centering
+		{\fontsize{14}{21}\selectfont
+			\textbf{\fontsize{18}{22}\selectfont \thesistitle}
+
+			\vspace{12pt}
+			by \\
+			\fullnames \\
+			{\fontsize{12.5pt}{18.75pt}\selectfont\null}
+
+			Proposal submitted in fulfilment of the requirements in respect of the degree \\
+			{\fontsize{12.5pt}{19.5pt}\selectfont\null}
+
+			\textbf{\degree} \\
+			\textbf{\proposaltype} \\
+			{\fontsize{15pt}{22.5pt}\selectfont\null}
+
+			in the \department \\
+			in the Faculty of Natural and Agricultural Sciences \\
+			at the University of the Free State \\
+		}
+
+		\rule{0pt}{22.5pt}
+
+		\includegraphics[width=5.63cm,height=5.68cm]{template_images/ufs_logo.png}
+
+		\vspace*{14pt}
+
+		Bloemfontein Campus, South Africa\\
+		\proposalmonth\ \proposalyear
+
+		{\fontsize{12pt}{14pt}\selectfont\null}
+
+		Supervisor: \supervisor
+
+	\end{titlepage}
+
+\end{document}
