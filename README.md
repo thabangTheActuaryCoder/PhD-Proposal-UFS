@@ -49,8 +49,9 @@ prediction. The work is organised in three parts.
 ## Status
 
 Proposal under construction. Results marked **To be established** are targets with a stated proof
-route, not proved theorems. The current working draft is `Proposal/PhD_Proposal_Skeleton.md`
-(section-by-section skeleton with a 10–12 page budget); full prose and a LaTeX build will follow.
+route, not proved theorems. The full prose draft is `Proposal/PhD_Proposal.md`; the
+section-by-section outline with page budgets is kept in `Proposal/PhD_Proposal_Skeleton.md`.
+A LaTeX build will follow.
 
 ## Model at a Glance
 
@@ -88,7 +89,8 @@ Y  ∈ [ L(x), U(x) ]  with coverage ≥ 1 − α              (calibrated predi
 ├── assets/
 │   └── ufs_logo.png                  # University of the Free State crest
 ├── Proposal/
-│   └── PhD_Proposal_Skeleton.md      # section-by-section skeleton (10-12 pg budget)
+│   ├── PhD_Proposal.md               # full prose draft
+│   └── PhD_Proposal_Skeleton.md      # section-by-section outline (10-12 pg budget)
 ├── References/
 │   └── References.bib                # BibTeX (natbib author-year)
 └── Offer/                            # Admission correspondence (to be added)
