@@ -13,3 +13,6 @@
 # OS / editor
 .DS_Store
 .vscode/
+*.brf
+*.bcf
+*.run.xml
