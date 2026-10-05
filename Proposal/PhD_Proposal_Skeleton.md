@@ -34,13 +34,23 @@ Variable-Annuity Guarantee Valuation under Stochastic Mortality
   under stochastic mortality.
 
 ## 2. Problem Statement and Research Gap 〔~1 pg〕
-- 2.1 What exists: NN emulators for VA portfolios — Hejazi & Jackson (2016, 2017), Gan & Lin
-  (2015, 2018); UQ methods — deep ensembles, Bayesian NN, conformal prediction.
-- 2.2 **The gap:** existing VA emulators return **point** values, use mostly **deterministic or
-  static** mortality, and carry **no calibrated uncertainty**. No work delivers a VA-guarantee
-  emulator that (i) ingests a **stochastic-mortality** state and (ii) returns a **coverage-
-  guaranteed predictive interval** separating emulator error from financial/mortality risk.
-- 2.3 One-sentence statement of the problem this thesis closes.
+- 2.1 What exists:
+  - *Cross-sectional emulators* for VA portfolios — Hejazi & Jackson (2016, 2017), Gan & Lin
+    (2015, 2018): fast surrogates over contracts, but **point** values, **static** mortality, **no UQ**.
+  - *Recent deep LSMC solvers* — Li & Lyu (2026): deep **signature** LSMC for surrender under
+    rough-Heston + **Volterra (stochastic) mortality**, with a convergence proof;
+    Langrené, Luo, Shevchenko & Zhang (2026): deep LSMC for GMWB, which already reports
+    **confidence intervals for the contract value**.
+- 2.2 **The gap — differentiate carefully against the 2026 LSMC work.** Those solvers price
+  *one contract* by backward regression and quantify only **Monte-Carlo estimator** error. No
+  work delivers a **cross-sectional emulator** `f_theta : x -> Y` over the full
+  policy/financial/**stochastic-mortality** state space that returns a **distribution-free,
+  finite-sample coverage-guaranteed predictive interval**, with an explicit **epistemic
+  (emulator) vs aleatoric (market + mortality)** decomposition. That object — emulation + conformal
+  predictive UQ under stochastic mortality — is the gap.
+- 2.3 Positioning: the LSMC solvers (esp. Li & Lyu's calibrated Volterra mortality) serve as the
+  **nested-MC ground-truth / label generator and benchmark**, not competitors.
+- 2.4 One-sentence statement of the problem this thesis closes.
 
 ## 3. Research Questions and Objectives 〔~0.75 pg〕
 - **RQ1.** Can a DNN emulate the present value of a VA guarantee liability, as a function of the
@@ -57,6 +67,10 @@ Group into themes, ~1 paragraph each; cite accurately.
 - 4.1 VA guarantees and nested-simulation valuation: Bauer–Kling–Russ (2008); Milevsky; Bacinello.
 - 4.2 Neural-network / metamodel emulation of VA portfolios: Hejazi & Jackson (2016, 2017);
   Gan (2013), Gan & Lin (2015, 2018); Kriging metamodels.
+- 4.2b Deep learning *solvers* for VA valuation (closest 2026 prior art — contrast with emulation):
+  Li & Lyu (2026, deep signature LSMC under rough-Heston + Volterra stochastic mortality, with
+  convergence proof); Langrené–Luo–Shevchenko–Zhang (2026, deep LSMC for GMWB with
+  Monte-Carlo confidence intervals). State explicitly how the emulator + conformal UQ differs.
 - 4.3 Stochastic mortality: Lee–Carter (1992); Cairns–Blake–Dowd; affine intensities — Biffis
   (2005), Dahl, Luciano–Vigna.
 - 4.4 Uncertainty quantification in deep learning: deep ensembles (Lakshminarayanan et al. 2017);
