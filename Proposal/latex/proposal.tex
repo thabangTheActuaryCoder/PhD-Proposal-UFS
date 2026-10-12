@@ -8,11 +8,31 @@
 \usepackage{amsmath,amssymb,mathtools}
 \usepackage{booktabs,longtable,array}
 \usepackage{enumitem}
-\usepackage[hidelinks]{hyperref}
 \usepackage{graphicx}
 \usepackage{fancyhdr}
 \usepackage{pdfpages}
 \usepackage{needspace}
+
+% Hyperlinks
+\usepackage[
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue,
+    pagebackref=true
+]{hyperref}
+
+% Format backref to show "Cited on page(s) ..." in the bibliography
+\renewcommand*{\backref}[1]{}
+\renewcommand*{\backrefalt}[4]{%
+  \ifcase #1 %
+    (Not cited.)%
+  \or
+    (Cited on p.~#2.)%
+  \else
+    (Cited on pp.~#2.)%
+  \fi
+}
 
 \onehalfspacing
 \pagestyle{fancy}
