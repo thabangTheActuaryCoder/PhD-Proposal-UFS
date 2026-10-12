@@ -13,6 +13,10 @@
 \usepackage{pdfpages}
 \usepackage{needspace}
 
+% Citations
+\usepackage{natbib}
+\setcitestyle{authoryear,open={(},close={)}}
+
 % Hyperlinks
 \usepackage[
     colorlinks=true,
@@ -66,14 +70,14 @@ Valuing the guarantees embedded in variable annuities is computationally expensi
 \section{Introduction}
 A variable annuity is a long term savings contract in which the policyholder invests in a reference fund while the insurer provides guarantees such as the guaranteed minimum accumulation, death and withdrawal benefits. These guarantees are options on the fund whose value depends jointly on the account value, interest rates, equity volatility, the policyholder's survival and the contract terms. The value has no closed form, so insurers estimate it by Monte Carlo valuation. Because a large book must be revalued repeatedly, for pricing, hedging and capital, this valuation is a major computational burden.
 
-Neural network emulators address this burden by learning the valuation map once and then evaluating it cheaply across the whole book. This approach is now well established \cite{hejazijackson2016,ganlin2018}. It has, however, two blind spots. First, the same valuation run that produces the value of a contract can also produce, at almost no extra cost, the sensitivities of that value to the risk factors, through pathwise or adjoint algorithmic differentiation. These sensitivities are exactly the hedging quantities an insurer needs, yet standard emulators are trained on values only and throw this information away. Second, emulators return a single number with no statement of how far it can be trusted.
+Neural network emulators address this burden by learning the valuation map once and then evaluating it cheaply across the whole book. This approach is now well established \citep{hejazi2016neural, gan2017efficient}. It has, however, two blind spots. First, the same valuation run that produces the value of a contract can also produce, at almost no extra cost, the sensitivities of that value to the risk factors, through pathwise or adjoint algorithmic differentiation. These sensitivities are exactly the hedging quantities an insurer needs, yet standard emulators are trained on values only and throw this information away. Second, emulators return a single number with no statement of how far it can be trusted.
 
-This proposal addresses both. Training the emulator on values and their sensitivities together is a strong form of regularisation: it pins down the valuation surface with far fewer training points and produces accurate sensitivities directly. This is the principle of differential machine learning \cite{hugesavine2020} and Sobolev training \cite{czarnecki2017}, and it is a natural fit for actuarial valuation, where the sensitivities are both available and wanted. Alongside each value and each sensitivity, the emulator reports a calibrated confidence interval. The setting throughout is stochastic mortality, so that the mortality intensity is a random process rather than a fixed life table, which is more realistic for long dated guarantees.
+This proposal addresses both. Training the emulator on values and their sensitivities together is a strong form of regularisation: it pins down the valuation surface with far fewer training points and produces accurate sensitivities directly. This is the principle of differential machine learning \citep{huge2020differential} and Sobolev training \citep{czarnecki2017sobolev}, and it is a natural fit for actuarial valuation, where the sensitivities are both available and wanted. Alongside each value and each sensitivity, the emulator reports a calibrated confidence interval. The setting throughout is stochastic mortality, so that the mortality intensity is a random process rather than a fixed life table, which is more realistic for long dated guarantees.
 
 \section{Existing Work and Research Gap}
-Two recent studies frame the project. Li and Lyu \cite{lilyu2026} value variable annuities under a Volterra mortality model combined with rough Heston equity dynamics, and show that a realistic, long memory mortality basis materially changes guarantee values. Langren\'e, Luo, Shevchenko and Zhang \cite{langrene2026} develop deep least squares Monte Carlo methods for variable annuities with guarantees, including optimal withdrawal, and report confidence intervals for the value of a contract. Both are per contract solvers: each run values one contract under one set of parameters, and the reported intervals describe Monte Carlo estimator error for that contract.
+Two recent studies frame the project. Li and Lyu \citep{li2026valuation} value variable annuities under a Volterra mortality model combined with rough Heston equity dynamics, and show that a realistic, long memory mortality basis materially changes guarantee values. Langren\'e, Luo, Shevchenko and Zhang \citep{langrene2026deep} develop deep least squares Monte Carlo methods for variable annuities with guarantees, including optimal withdrawal, and report confidence intervals for the value of a contract. Both are per contract solvers: each run values one contract under one set of parameters, and the reported intervals describe Monte Carlo estimator error for that contract.
 
-The emulation literature takes the complementary, portfolio view \cite{hejazijackson2016,ganlin2018}: a single model maps contract and market characteristics to value across the whole book, but it is trained on values alone and returns point estimates. Differential machine learning \cite{hugesavine2020} has shown, for financial derivatives, that training on values and pathwise derivatives together gives large gains in accuracy and data efficiency, but it has not been applied to insurance guarantees, to stochastic mortality, or with calibrated uncertainty.
+The emulation literature takes the complementary, portfolio view \citep{hejazi2016neural, gan2017efficient}: a single model maps contract and market characteristics to value across the whole book, but it is trained on values alone and returns point estimates. Differential machine learning \citep{huge2020differential} has shown, for financial derivatives, that training on values and pathwise derivatives together gives large gains in accuracy and data efficiency, but it has not been applied to insurance guarantees, to stochastic mortality, or with calibrated uncertainty.
 
 The gap is therefore specific. There is no variable annuity emulator that is trained jointly on values and sensitivities, that produces hedging sensitivities as a direct output, that reports calibrated intervals on both the value and the sensitivities, and that does so when the mortality basis is itself stochastic and every input is real data.
 
@@ -112,12 +116,12 @@ The project uses real, citable data throughout. Table~\ref{tab:data} lists each 
 \toprule
 \textbf{Dataset} & \textbf{Content used} & \textbf{Role in the project} \\
 \midrule
-Bloomberg \cite{bloomberg} & S\&P 500 index level (\texttt{SPX Index}), index option prices (\texttt{OMON}), implied volatility surface (\texttt{OVDV}), option Greeks (\texttt{OVML}), dividend yield, VIX; daily, 2010 to 2026 & equity and volatility state; observed (price, Greek) pairs for validating the differential method \\
-OptionMetrics IvyDB US \cite{optionmetrics} & S\&P 500 option prices, implied volatilities and Greeks via WRDS & independent cross check of the Bloomberg option data \\
-US Treasury \cite{ustreasury} and FRED \cite{fred} & daily par yield curve; short rate & interest rate state and discounting \\
-SEC Variable Insurance Product Data Sets \cite{secvip} & contract terms filed on Forms N-3, N-4 and N-6: guarantee types, rider fees, surrender charge schedules, withdrawal rates & real variable annuity contract terms \\
-Human Mortality Database \cite{hmd} & death counts and exposures by age, sex and year, United States & calibration of the stochastic mortality model \\
-Statistics South Africa \cite{statssa} & mortality and causes of death; life tables & South African case study \\
+Bloomberg \citep{bloomberg2026} & S\&P 500 index level (\texttt{SPX Index}), index option prices (\texttt{OMON}), implied volatility surface (\texttt{OVDV}), option Greeks (\texttt{OVML}), dividend yield, VIX; daily, 2010 to 2026 & equity and volatility state; observed (price, Greek) pairs for validating the differential method \\
+OptionMetrics IvyDB US \citep{optionmetrics2026} & S\&P 500 option prices, implied volatilities and Greeks via WRDS & independent cross check of the Bloomberg option data \\
+US Treasury \citep{ustreasury2026} and FRED \citep{fred2026} & daily par yield curve; short rate & interest rate state and discounting \\
+SEC Variable Insurance Product Data Sets \citep{sec2025vip} & contract terms filed on Forms N-3, N-4 and N-6: guarantee types, rider fees, surrender charge schedules, withdrawal rates & real variable annuity contract terms \\
+Human Mortality Database \citep{hmd2026} & death counts and exposures by age, sex and year, United States & calibration of the stochastic mortality model \\
+Statistics South Africa \citep{statssa2024mortality} & mortality and causes of death; life tables & South African case study \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -152,7 +156,7 @@ Y(x)=\E^{\Q}\!\left[\text{discounted guarantee cash flows} - \text{discounted fe
 \end{equation}
 and its sensitivities $G(x)=\nabla_x Y(x)$, whose components are the hedging Greeks: delta with respect to the equity level, vega with respect to volatility, rho with respect to the interest rate, and a mortality sensitivity. For each record the valuation engine returns an estimate $\widehat Y_i$ and, by adjoint algorithmic differentiation at the cost of roughly one extra pass, an estimate $\widehat G_i$.
 
-Mortality enters through a stochastic force of mortality $\mu_{x+t}$, with an affine intensity model as the baseline and the Volterra specification of Li and Lyu \cite{lilyu2026} as a robustness check; the Lee and Carter model \cite{lee1992} fitted to the same data provides the mortality trend and cohort inputs. Keeping two specifications separates the emulation question from the choice of mortality model.
+Mortality enters through a stochastic force of mortality $\mu_{x+t}$, with an affine intensity model as the baseline and the Volterra specification of Li and Lyu \citep{li2026valuation} as a robustness check; the Lee and Carter model \citep{lee1992modeling} fitted to the same data provides the mortality trend and cohort inputs. Keeping two specifications separates the emulation question from the choice of mortality model.
 
 \subsection{Sensitivity augmented training}
 The emulator $f_\theta$ is a deep feedforward network trained to match both the values and the sensitivities,
@@ -164,17 +168,17 @@ The emulator $f_\theta$ is a deep feedforward network trained to match both the 
 where $\partial_{x_k} f_\theta$ is computed by automatic differentiation and the weights $\lambda_k$ balance the value term against each sensitivity term. The second group of terms is what distinguishes this emulator from a standard one. Each training record now supplies one constraint on the value and one on each slope, so the information per record is much larger. This is expected to raise accuracy at a fixed training budget, to reach a target accuracy with fewer valuations, and to give hedging sensitivities that are markedly more stable than those obtained by differentiating a value only fit. Hyperparameters, including the $\lambda_k$, will be tuned on a validation set by Bayesian optimisation, as in the candidate's MSc work.
 
 \subsection{Confidence intervals}
-A valuation that drives a reserve or a hedge must come with an honest statement of its reliability, so the emulator does not report point estimates alone. Uncertainty is estimated with deep ensembles \cite{lakshminarayanan2017}, and the resulting scale $s(x)$ is calibrated by split conformal prediction \cite{lei2018,romano2019} on a held out calibration set, giving the interval
+A valuation that drives a reserve or a hedge must come with an honest statement of its reliability, so the emulator does not report point estimates alone. Uncertainty is estimated with deep ensembles \citep{lakshminarayanan2017simple}, and the resulting scale $s(x)$ is calibrated by split conformal prediction \citep{lei2018distribution, romano2019conformalized} on a held out calibration set, giving the interval
 \begin{equation}
 C_\alpha(x)=\big[f_\theta(x)-q_{1-\alpha}\,s(x),\ f_\theta(x)+q_{1-\alpha}\,s(x)\big],
 \end{equation}
-which contains the true value with probability at least $1-\alpha$ in finite samples. The same construction is applied to each sensitivity. Calibration is assessed by empirical coverage, interval width and the continuous ranked probability score \cite{gneiting2007}.
+which contains the true value with probability at least $1-\alpha$ in finite samples. The same construction is applied to each sensitivity. Calibration is assessed by empirical coverage, interval width and the continuous ranked probability score \citep{gneiting2007strictly}.
 
 \section{Experimental Design and Evaluation}
 The method is first validated on the Bloomberg index option data, where the emulator is trained to reproduce the observed option prices and Greeks; this directly tests whether the sensitivity terms in \eqref{eq:sobolev} improve accuracy and data efficiency against a value only emulator of identical architecture. It is then applied to the variable annuity dataset of Section~\ref{sec:data}. Records are split chronologically into training, validation, calibration and test periods, so that every test is out of time on real market history. The evaluation covers:
 \begin{itemize}[leftmargin=*]
 \item value accuracy: root mean squared and mean absolute error against held out values;
-\item sensitivity accuracy: error against held out Greeks and, operationally, the profit and loss of a hedge driven by the emulator sensitivities over the observed market path, following \cite{hullwhite2017};
+\item sensitivity accuracy: error against held out Greeks and, operationally, the profit and loss of a hedge driven by the emulator sensitivities over the observed market path, following \citep{hull2017optimal};
 \item data efficiency: accuracy as a function of the number of training records;
 \item uncertainty: empirical and conditional coverage, interval width and proper scores, including in stressed periods such as March 2020;
 \item cost: valuation time for the full book relative to the engine.
@@ -206,103 +210,7 @@ The method is first validated on the Bloomberg index option data, where the emul
 \section{Ethics and Reproducibility}
 The research uses market data, publicly filed contract terms and population mortality data. It involves no identifiable policyholder information and no human participants. Ethics clearance will be obtained from the University of the Free State before data work begins. All code, data extraction scripts and random seeds will be version controlled so that every result can be reproduced.
 
-\begin{thebibliography}{99}
-
-\bibitem{bloomberg}
-Bloomberg L.P. (2026).
-Bloomberg Professional service: \texttt{SPX Index} price history, \texttt{OMON} option monitor, \texttt{OVDV} volatility surface and \texttt{OVML} option valuation, 2010 to 2026.
-Retrieved from the Bloomberg terminal.
-
-\bibitem{czarnecki2017}
-Czarnecki, W. M., Osindero, S., Jaderberg, M., Swirszcz, G. and Pascanu, R. (2017).
-Sobolev training for neural networks.
-\emph{Advances in Neural Information Processing Systems}, 30.
-
-\bibitem{fred}
-Federal Reserve Bank of St. Louis (2026).
-Federal Reserve Economic Data (FRED).
-\url{https://fred.stlouisfed.org}.
-
-\bibitem{ganlin2018}
-Gan, G. and Lin, X. S. (2018).
-Efficient greek calculation of variable annuity portfolios for dynamic hedging: A two level metamodeling approach.
-\emph{North American Actuarial Journal}, 22(2), 161 to 177.
-
-\bibitem{gneiting2007}
-Gneiting, T. and Raftery, A. E. (2007).
-Strictly proper scoring rules, prediction, and estimation.
-\emph{Journal of the American Statistical Association}, 102(477), 359 to 378.
-
-\bibitem{hejazijackson2016}
-Hejazi, S. A. and Jackson, K. R. (2016).
-A neural network approach to efficient valuation of large portfolios of variable annuities.
-\emph{Insurance: Mathematics and Economics}, 70, 169 to 181.
-
-\bibitem{hmd}
-HMD (2026).
-Human Mortality Database. Max Planck Institute for Demographic Research (Germany), University of California, Berkeley (USA), and French Institute for Demographic Studies (France).
-\url{https://www.mortality.org}.
-
-\bibitem{hugesavine2020}
-Huge, B. and Savine, A. (2020).
-Differential machine learning.
-\emph{arXiv preprint arXiv:2005.02347}.
-
-\bibitem{hullwhite2017}
-Hull, J. and White, A. (2017).
-Optimal delta hedging for options.
-\emph{Journal of Banking and Finance}, 82, 180 to 190.
-
-\bibitem{lakshminarayanan2017}
-Lakshminarayanan, B., Pritzel, A. and Blundell, C. (2017).
-Simple and scalable predictive uncertainty estimation using deep ensembles.
-\emph{Advances in Neural Information Processing Systems}, 30.
-
-\bibitem{langrene2026}
-Langren\'e, N., Luo, X., Shevchenko, P. V. and Zhang, R. (2026).
-Deep least squares Monte Carlo methods for the valuation of variable annuities with guarantees.
-\emph{arXiv preprint arXiv:2605.27182}.
-
-\bibitem{lee1992}
-Lee, R. D. and Carter, L. R. (1992).
-Modeling and forecasting U.S. mortality.
-\emph{Journal of the American Statistical Association}, 87(419), 659 to 671.
-
-\bibitem{lei2018}
-Lei, J., G'Sell, M., Rinaldo, A., Tibshirani, R. J. and Wasserman, L. (2018).
-Distribution free predictive inference for regression.
-\emph{Journal of the American Statistical Association}, 113(523), 1094 to 1111.
-
-\bibitem{lilyu2026}
-Li, W. and Lyu, H. (2026).
-Valuation of variable annuities under the Volterra mortality and rough Heston models.
-\emph{arXiv preprint arXiv:2604.00472}.
-
-\bibitem{optionmetrics}
-OptionMetrics (2026).
-IvyDB US. Accessed via Wharton Research Data Services (WRDS).
-\url{https://wrds-www.wharton.upenn.edu}.
-
-\bibitem{romano2019}
-Romano, Y., Patterson, E. and Cand\`es, E. J. (2019).
-Conformalized quantile regression.
-\emph{Advances in Neural Information Processing Systems}, 32.
-
-\bibitem{secvip}
-U.S. Securities and Exchange Commission, Division of Economic and Risk Analysis (2025).
-Variable Insurance Product Data Sets (Forms N-3, N-4 and N-6), monthly releases.
-\url{https://www.sec.gov/data-research/sec-markets-data}.
-
-\bibitem{statssa}
-Statistics South Africa (2024).
-Mortality and causes of death in South Africa: Findings from death notification. Statistical release P0309.3.
-\url{https://www.statssa.gov.za}.
-
-\bibitem{ustreasury}
-U.S. Department of the Treasury (2026).
-Daily Treasury par yield curve rates.
-\url{https://home.treasury.gov/resource-center/data-chart-center/interest-rates}.
-
-\end{thebibliography}
+\bibliographystyle{abbrvnat}
+\bibliography{References}
 
 \end{document}
